@@ -165,21 +165,16 @@ void String::init(EScript::Namespace & globals) {
 		}
 	})
 
-	//! [ESMF] Number|false String.rFind( (String)search [,(Number)startIndex] )// UNICODE_TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	//! [ESMF] Number|false String.rFind( (String)search [,(Number)startIndex] )
 	ES_MFUNCTION(typeObject,const String,"rFind",1,2, {
-		const std::string & s(thisObj->getString());
-		std::string search = parameter[0].toString();
-		size_t start = s.length();
-		if(parameter.count()>1) {
-			start = static_cast<size_t>(parameter[1].to<int>(rt));
-			if(start>=s.length())
-				start = s.length();
-			//std::cout << " #"<<start<< " ";
-		}
-		size_t pos = s.rfind(search,start);
+		const size_t pos = parameter.count() == 1 ? 
+								thisObj->sData.rFind(parameter[0].toString()) :
+								thisObj->sData.rFind(parameter[0].toString(),parameter[1].toUInt());
 		if(pos==std::string::npos ) {
 			return false;
-		} else return static_cast<uint32_t>(pos);
+		} else {
+			return static_cast<uint32_t>(pos);
+		}
 	})
 
 
