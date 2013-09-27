@@ -6,6 +6,7 @@
 #include "Parser.h"
 #include "CompilerContext.h"
 #include "../Consts.h"
+#include "AST/AnnotatedStatement.h"
 #include "AST/Block.h"
 #include "AST/ConditionalExpr.h"
 #include "AST/ControlStatements.h"
@@ -196,6 +197,22 @@ bool initHandler(handlerRegistry_t & m){
 
 	// ------------------------
 
+	// @( [annotations] ) [statement]
+	ADD_HANDLER( ASTNode::TYPE_ANNOTATED_STATEMENT, AnnotatedStatement, {
+//		const uint32_t target = ctxt.getCurrentMarker(CompilerContext::BREAK_MARKER);
+//		if(target==Instruction::INVALID_JUMP_ADDRESS){
+//			ctxt.getCompiler().throwError(ctxt,"'break' outside a loop.");
+//		}
+//		std::vector<size_t> variablesToReset;
+//		ctxt.collectLocalVariables(CompilerContext::BREAK_MARKER,variablesToReset);
+//		for(const auto & var : variablesToReset) {
+//			ctxt.addInstruction(Instruction::createResetLocalVariable(var));
+//		}
+//		ctxt.addInstruction(Instruction::createJmp(target));
+		ctxt.addStatement(self->getStatement());
+	})
+	
+	// break
 	ADD_HANDLER( ASTNode::TYPE_BREAK_STATEMENT, BreakStatement, {
 		const uint32_t target = ctxt.getCurrentMarker(CompilerContext::BREAK_MARKER);
 		if(target==Instruction::INVALID_JUMP_ADDRESS){

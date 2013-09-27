@@ -668,8 +668,6 @@ RtValue RuntimeInternals::startFunctionExecution(const ObjPtr & fun,const ObjPtr
 				for(ParameterValues::const_iterator it = pValues.begin(); it!= pValues.end(); ++it,++variableIdx)
 					fcc->assignToLocalVariable(variableIdx,*it);
 			}
-			// init $thisFn (\todo only if the variable is used?)
-			fcc->assignToLocalVariable(Consts::LOCAL_VAR_INDEX_thisFn,fun);
 			return RtValue::createFunctionCallContext(fcc.detachAndDecrease());
 		}
 		case _TypeIds::TYPE_DELEGATE:{

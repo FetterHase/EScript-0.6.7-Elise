@@ -22,9 +22,8 @@ class ASTNode;
 }
 class Compiler;
 
-/*! Collection of "things" used during the compilation process.
-	As the compilation process is currently under development, it is not clear how this class changes
-	in the near future.	*/
+/*! Collection of "things" used during the compilation process of one user function function 
+	(or block of code without surrounding function).*/
 class CompilerContext {
 		Compiler & compiler;
 		InstructionBlock & instructions;

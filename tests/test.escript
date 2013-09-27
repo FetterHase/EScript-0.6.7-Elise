@@ -1,6 +1,16 @@
 // Testcases for HasEScript Scripting-Language
 out ("EScript Testcases\nVersion: ",EScript.VERSION_STRING,"\n","-"*79,"\n");
 
+for(var i=0;i<10;++i)
+@(once){
+	out("foo");
+
+}
+outln(thisFn);
+//thisFn.foo := "bla";
+
+eval(" fn(){ outln(thisFn);}(); ");
+
 //----
 // init
 GLOBALS.benchmark:=false;

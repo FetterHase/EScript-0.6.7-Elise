@@ -279,8 +279,6 @@ bool Object::rt_isEqual(Runtime &,const ObjPtr & other){
 }
 
 bool Object::isEqual(Runtime &runtime,const ObjPtr & other) {
-	// if(other == this)
-//		return true;
 	return callMemberFunction(runtime,this,Consts::IDENTIFIER_fn_equal,ParameterValues(other.get())).toBool();
 }
 
