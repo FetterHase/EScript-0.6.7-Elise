@@ -51,88 +51,29 @@ public:
 		declareConstant(&ns,getClassName(),typeObject);
 
 		//! TestObject new TestObject([i [,j]])
-		ESF_DECLARE(typeObject,"_constructor",0,2,new E_TestObject(parameter[0].to<int>(runtime),parameter[1].to<float>(runtime)))
+		ES_CTOR(typeObject,0,2,new E_TestObject(parameter[0].to<int>(rt),parameter[1].to<float>(rt)))
 
 		//! Number getM1()
-		ESMF_DECLARE(typeObject,E_TestObject,"getM1",0,0,(**self).m1)
+		ES_MFUN(typeObject, const TestObject,"getM1",0,0, thisObj->m1)
 
 		//! Number getM2()
-		ESMF_DECLARE(typeObject,E_TestObject,"getM2",0,0,(**self).m2)
+		ES_MFUN(typeObject, const TestObject,"getM2",0,0, thisObj->m2)
 		
 		//! self setM1(Number)
-		ESMF_DECLARE(typeObject,E_TestObject,"setM1",1,1,((**self).m1=parameter[0].to<int>(runtime),self))
+		ES_MFUN(typeObject, TestObject,"setM1",1,1,( thisObj->m1=parameter[0].to<int>(rt),thisEObj))
 
 		//! self setM2(Number)
-		ESMF_DECLARE(typeObject,E_TestObject,"setM2",1,1,((**self).m2=parameter[0].to<float>(runtime),self))
+		ES_MFUN(typeObject, TestObject,"setM2",1,1,( thisObj->m2=parameter[0].to<float>(rt),thisEObj))
 
 	}
 };
 
+// define rule to convert E_TestObject to TestObject*
+ES_CONV_EOBJ_TO_OBJ(E_TestObject, TestObject*,	&**eObj)
+
 // ----------------------------------------------------------------------------
 
-static const uint32_t INVALID_CODE_POINT = ~0;
-
-static uint32_t readCodePoint_utf8(const char* &cursor,const char*utf8End){
-	if(cursor >= utf8End )
-		return INVALID_CODE_POINT;
-	const uint8_t byte0 = static_cast<uint8_t>(*cursor);
-	if(byte0<0x80){ // 1 byte
-		++cursor;
-		return static_cast<uint32_t>(byte0);
-	}else if(byte0<0xE0){ // 2 byte sequence
-		if(byte0<0xC2 || cursor+1 >= utf8End)
-			return INVALID_CODE_POINT;
-		const uint8_t byte1 = static_cast<uint8_t>(*(cursor+1));
-		if( (byte1&0xC0) != 0x80 )
-			return INVALID_CODE_POINT;
-		cursor += 2;
-		return	(static_cast<uint32_t>(byte0&0x1F) << 6) + (byte1&0x3F) ;
-	}else if(byte0<0xF0){ // 3 byte sequence
-		if(cursor+2 >= utf8End)
-			return INVALID_CODE_POINT;
-		const uint8_t byte1 = static_cast<uint8_t>(*(cursor+1));
-		const uint8_t byte2 = static_cast<uint8_t>(*(cursor+2));
-		if( (byte1&0xC0) != 0x80 || (byte2&0xC0) != 0x80 )
-			return INVALID_CODE_POINT;
-		cursor += 3;
-		return	(static_cast<uint32_t>(byte0&0x0F) << 12) + 
-				(static_cast<uint32_t>(byte1&0x3F) << 6) + 
-				(byte2&0x3F) ;
-	}else if(byte0<0xF5){ // 4 byte sequence
-		if(cursor+3 >= utf8End)
-			return INVALID_CODE_POINT;
-		const uint8_t byte1 = static_cast<uint8_t>(*(cursor+1));
-		const uint8_t byte2 = static_cast<uint8_t>(*(cursor+2));
-		const uint8_t byte3 = static_cast<uint8_t>(*(cursor+3));
-		if( (byte1&0xC0) != 0x80 || (byte2&0xC0) != 0x80 || (byte3&0xC0) != 0x80 )
-			return INVALID_CODE_POINT;
-		cursor += 4;
-		return	(static_cast<uint32_t>(byte0&0x07) << 18) + 
-				(static_cast<uint32_t>(byte1&0x3F) << 12) + 
-				(static_cast<uint32_t>(byte2&0x3F) << 6) + 
-				(byte3&0x3F);
-	}else{
-		return INVALID_CODE_POINT;
-	}
-}
-
-//result readCodePoint_utf8(cursor, const char *utf8End,)
-
 int main(int argc,char * argv[]) {
-
-	std::string str ( u8"yä®€𝄞" );
-	const char * cursor = str.c_str();
-	std::cout << std::hex << readCodePoint_utf8( cursor,str.c_str()+str.length() )<<"\n";
-	std::cout << std::hex << readCodePoint_utf8( cursor,str.c_str()+str.length() )<<"\n";
-	std::cout << std::hex << readCodePoint_utf8( cursor,str.c_str()+str.length() )<<"\n";
-	std::cout << std::hex << readCodePoint_utf8( cursor,str.c_str()+str.length() )<<"\n";
-	std::cout << std::hex << readCodePoint_utf8( cursor,str.c_str()+str.length() )<<"\n";
-	
-//	UTF8InputStream in(str);
-//	while(in.good()){
-//		in.peek()
-//	}
-	
 	EScript::init();
 
 	// --- Init the TestObejct-Type

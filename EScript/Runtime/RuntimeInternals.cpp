@@ -901,7 +901,7 @@ void RuntimeInternals::throwException(const std::string & s,Object * obj) {
 
 //! (internal)
 void RuntimeInternals::initSystemFunctions(){
-	systemFunctions.resize(9);  //! < this has to be adjusted manually if new system functions are added.
+	systemFunctions.resize( Consts::NUM_SYS_CALLS );  
 
 	#define ES_SYS_FUNCTION(_name) \
 	static EScript::RtValue _name(	EScript::RuntimeInternals & rtIt UNUSED_ATTRIBUTE, \
@@ -1072,6 +1072,25 @@ void RuntimeInternals::initSystemFunctions(){
 			}
 		};
 		systemFunctions[Consts::SYS_CALL_CASE_TEST] = _::sysCall;
+	}
+	{	/*! [ESSF] bool SYS_CALL_ONCE( ) : pop onceMarkerId;
+			if thisFn has an attribute named @p onceMarker id, true (=skip) is returned.
+			else a corresponding attribute is set and false (=do not skip) is returned.
+		*/
+		struct _{
+			ES_SYS_FUNCTION( sysCall ) {
+				auto fcc = rtIt.getActiveFCC();
+				const StringId markerId = fcc->stack_popIdentifier();
+				const Attribute & attr = fcc->getUserFunction()->getLocalAttribute(markerId);
+				if(attr.isNull()){ // first call -> set attribute and don't skip statement
+					fcc->getUserFunction()->setAttribute(markerId, create(nullptr)); // store void
+					return false;
+				}else{ // already called -> skip statement
+					return true;
+				}
+			}
+		};
+		systemFunctions[Consts::SYS_CALL_ONCE] = _::sysCall;
 	}
 	
 }

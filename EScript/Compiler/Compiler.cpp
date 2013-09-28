@@ -59,9 +59,13 @@ UserFunction * Compiler::compile(const CodeFragment & code){
 	// outerBlock is used to add a return statement: {return {block}}
 	ERef<AST::Block> outerBlock(AST::Block::createBlockStatement());
 	outerBlock->addStatement(new AST::ReturnStatement(block.get()));
-
+		
 	// compile and create instructions
 	CompilerContext ctxt(*this,fun->getInstructionBlock(),code);
+	
+	// this would make 'this' and 'thisFn' available. This is not intended here. (not sure though...)
+	//ctxt.pushSetting_basicLocalVars(); // make 'this' and parameters available
+
 	ctxt.addExpression(outerBlock.get());
 	Compiler::finalizeInstructions(fun->getInstructionBlock());
 
@@ -199,17 +203,13 @@ bool initHandler(handlerRegistry_t & m){
 
 	// @( [annotations] ) [statement]
 	ADD_HANDLER( ASTNode::TYPE_ANNOTATED_STATEMENT, AnnotatedStatement, {
-//		const uint32_t target = ctxt.getCurrentMarker(CompilerContext::BREAK_MARKER);
-//		if(target==Instruction::INVALID_JUMP_ADDRESS){
-//			ctxt.getCompiler().throwError(ctxt,"'break' outside a loop.");
-//		}
-//		std::vector<size_t> variablesToReset;
-//		ctxt.collectLocalVariables(CompilerContext::BREAK_MARKER,variablesToReset);
-//		for(const auto & var : variablesToReset) {
-//			ctxt.addInstruction(Instruction::createResetLocalVariable(var));
-//		}
-//		ctxt.addInstruction(Instruction::createJmp(target));
+				
+		const uint32_t skipMarker = ctxt.createMarker();
+		ctxt.addInstruction(Instruction::createPushId( ctxt.createOnceStatementMarker() ));
+		ctxt.addInstruction(Instruction::createSysCall( Consts::SYS_CALL_ONCE,0 )); // directly pops the id from the stack
+		ctxt.addInstruction(Instruction::createJmpOnTrue( skipMarker ));
 		ctxt.addStatement(self->getStatement());
+		ctxt.addInstruction(Instruction::createSetMarker( skipMarker ));
 	})
 	
 	// break

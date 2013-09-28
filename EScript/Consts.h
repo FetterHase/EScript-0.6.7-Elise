@@ -86,6 +86,8 @@ struct Consts{
 	static const size_t SYS_CALL_TEST_ARRAY_PARAMETER_CONSTRAINTS = 6;
 	static const size_t SYS_CALL_EXPAND_PARAMS_ON_STACK = 7;
 	static const size_t SYS_CALL_CASE_TEST = 8;
+	static const size_t SYS_CALL_ONCE = 9;
+	static const size_t NUM_SYS_CALLS = 10;
 
 	static const uint32_t DYNAMIC_PARAMETER_COUNT = ~0u;
 };

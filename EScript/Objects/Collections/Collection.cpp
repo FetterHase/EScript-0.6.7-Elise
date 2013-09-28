@@ -194,9 +194,7 @@ bool Collection::rt_isEqual(Runtime &runtime,const ObjPtr & other){
  */
 Object * Collection::rt_map(Runtime & runtime,ObjPtr function, const ParameterValues & additionalValues){
 	// Create new, empty Collection
-	//! \todo createInstance( getType() )
 	ObjRef obj = runtime.createInstance(getType(),ParameterValues());
-//	callMemberFunction(runtime,getType(),Consts::IDENTIFIER_fn_factory,ParameterValues());
 	ERef<Collection> newCollectionRef = obj.toType<Collection>();
 	if(newCollectionRef.isNull()){
 		runtime.setException("Collection.map(..) No Constructor found!");
