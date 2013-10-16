@@ -3,13 +3,13 @@
 // See copyright notice in basics.escript
 // ------------------------------------------------------
 
-/*! 
+loadOnce(__DIR__+"/basics.escript");
+
+/*!
  ** Set data structure
  */
- 
 var T = new Type;
 Std.Set := T;
-	
 
 T._printableName @(override) ::= $Set;
 
@@ -35,7 +35,7 @@ T.clone ::= fn(){
 	return c;
 };
 T.contains ::= fn(value){
-	return data.containsKey(value);	
+	return data.containsKey(value);
 };
 T.count ::= fn(){
 	return data.count();
@@ -82,7 +82,7 @@ T.substract ::= fn(Std.Set other){
 		data.unset(value);
 	return this;
 };
-T.toArray ::= fn(){	
+T.toArray ::= fn(){
 	var a = [];
 	foreach(data as var value,var dummy)
 		a+=value;
@@ -103,8 +103,7 @@ T."==" ::= fn(other){
 	return (other---|>(this.getType())) ? (data==other.data) : false;
 };
 
-
-// Std._registerModuleResult("Std/Set",T); // support loading with Std.requireModule and loadOnce.
+Std._registerModule("Std/Set",T); // support loading with Std.requireModule and loadOnce.
 return T;
 
 // ------------------------------------------

@@ -1,17 +1,17 @@
-// ConfigMananger.escript
+// JSONDataStore.escript
 // This file is part of the EScript StdLib library.
 // See copyright notice in basics.escript
 // ------------------------------------------------------
 /**
  ** Configuration management for storing JSON-expressable data.
  **/
- 
+
 loadOnce(__DIR__ + "/basics.escript");
 
 var T = new Type;
-Std.ConfigManager := T;
+Std.JSONDataStore := T;
 
-T._printableName @(override) ::= $ConfigManager;
+T._printableName @(override) ::= $JSONDataStore;
 
 T.data @(private,init) := Map;
 T.filename @(private) := "";
@@ -26,12 +26,12 @@ T.getFilename ::= fn(){
 	return this.filename;
 };
 
-/*!	Get a config-value. 
+/*!	Get a config-value.
 	If the value is not set, the default value is returned and memorized.	*/
-T.getValue ::= fn( key, defaultValue = void){
+T.get ::= fn( key, defaultValue = void){
 	var fullKey = key.toString();
 	var group = this.data;
-	
+
 	// Key is subgroup key
 	if(key.contains(".")){
 		var groupNames = key.split(".");
@@ -46,7 +46,7 @@ T.getValue ::= fn( key, defaultValue = void){
 			group = newGroup;
 		}
 	}
-		
+
 	var value = parseJSON(toJSON(group[key])); // deep copy
     if(void===value){
         if(void!==defaultValue)
@@ -73,18 +73,20 @@ T.init ::= fn( filename, warnOnFailure = true ){
     	if(warnOnFailure)
 			Runtime.warn("Could not load config-file("+filename+"): "+e);
         return false;
-    }	
+    }
     return true;
 };
 
-//! Save configuration to file. 
+//! Save configuration to file.
 T.save ::= fn( filename = void){
     if(!filename){
         filename = this.filename;
     }
-    var s = toJSON(this.data);
-    if(s.length()>0){
-        IO.saveTextFile(filename,s);
+    if(!filename){
+		var s = toJSON(this.data);
+		if(s.length()>0){
+			IO.saveTextFile(filename,s);
+		}
     }
 };
 
@@ -95,14 +97,14 @@ T.setInfo ::= fn( key, value){
 
 
 /*! Store a copy of the value with the given key.
-	If the key contains dots (.), the left side is interpreted as a subgroup. 
+	If the key contains dots (.), the left side is interpreted as a subgroup.
 	If the value is void, the entry is removed.
-	\example 
+	\example
 		setValue( "Foo.bar.a1" , 2 );
 		---> { "Foo" : { "bar : { "a1" : 2 } } }
 	\note if autoSave is true, the config file is saved immediately
 	*/
-T.setValue ::= fn( key, value){
+T.set ::= fn( key, value){
 	if(void===value){
 		unsetValue(key);
 		return;
@@ -128,9 +130,9 @@ T.setValue ::= fn( key, value){
 	}
 };
 
-T.unsetValue ::= fn(key){
+T.unset ::= fn(key){
 	var group = this.data;
-	
+
 	// Key is subgroup key
 	var groupNames = key.split(".");
 	key = groupNames.popBack();
@@ -139,14 +141,18 @@ T.unsetValue ::= fn(key){
 		if(! (group---|>Map) )
 			return;
 	}
-	
+
 	group.unset(key);
 	if(autoSave)
 		save();
 };
 
-Std.Traits.addTrait( T, Std.Traits.ValueStoreInterface );
+
+T._get ::= T.get;
+T._set ::= T.set;
+
+Std.Traits.addTrait( T, Std.Traits.JSONDataStore );
+
 
 return T;
 // -----------------
-
