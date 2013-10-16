@@ -65,6 +65,7 @@ Std.declareNamespace := declareNamespace;
 // module loading
 
 var moduleRegistry = new Map;
+var moduleListeners = new Map;
 var moduleSearchPaths = [];
 
 //! \todo allow aliases Std.setModuleAlias
@@ -73,7 +74,8 @@ var moduleSearchPaths = [];
 Std.addModuleSearchPath := [moduleSearchPaths] => fn(moduleSearchPaths, String path){
 	if(!path.endsWith("/"))
 		path += "/";
-	moduleSearchPaths+= path;
+	if(!moduleSearchPaths.contains(path))
+		moduleSearchPaths+= path;
 };
 
 Std.getModule := [moduleRegistry] => fn(String moduleId){
@@ -84,7 +86,7 @@ Std.getModule := [moduleRegistry] => fn(String moduleId){
 
 //! (internal)
 var loader = [moduleSearchPaths] => fn(moduleSearchPaths, String moduleId){
-	if(moduleId.contains("\\") || moduleId.contains("..") || 
+	if(moduleId.contains("\\") || moduleId.contains("..") ||
 			moduleId.beginsWith("/") || moduleId.contains("//") || moduleId.endsWith(".escript")){
 		Runtime.exception("Std.require: Invalid moduleId '"+moduleId+"'");
 	}
@@ -99,15 +101,20 @@ var loader = [moduleSearchPaths] => fn(moduleSearchPaths, String moduleId){
 	Runtime.exception("Std.require: Module not found '"+moduleId+"'");
 };
 
-Std.require := [loader,moduleRegistry] => fn(loader, moduleRegistry, String moduleId){
+Std.require := [loader,moduleRegistry,moduleListeners] => fn(loader,moduleRegistry,moduleListeners, String moduleId){
 	var module;
 	if(moduleRegistry.containsKey(moduleId)){
 		module = moduleRegistry[moduleId];
-		
 	}else{
 		moduleRegistry[moduleId] = $__INVALID_MODULE; // set key to mark the loading attempt.
 		module = loader(moduleId); // throws an exception on failure.
 		moduleRegistry[moduleId] = module;
+		var callbacks = moduleListeners[moduleId];
+		if(callbacks){
+			moduleListeners[moduleId] = void;
+			foreach(callbas as var fun)
+				fun(module);
+		}
 	}
 	if( $__INVALID_MODULE==module){ // The loading already failed.
 		Runtime.exception("Std.require: Invalid module '"+moduleId+"'");
@@ -128,5 +135,16 @@ Std._unregisterModule := [moduleRegistry] => fn(moduleRegistry, String moduleId)
 	moduleRegistry.unset(moduleId);
 };
 
+Std.registerModuleListener := [moduleRegistry,moduleListeners] => fn(String moduleId,callback){
+	var module = Std.getModule(moduleId);
+	if(void==module){
+		if(moduleListeners[moduleId])
+			moduleListeners[moduleId] += callback;
+		else
+			moduleListeners[moduleId] = [callback];
+	}else{
+		callback(module);
+	}
+};
 
 // ------------------------------------------

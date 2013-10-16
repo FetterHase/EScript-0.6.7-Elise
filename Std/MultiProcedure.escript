@@ -11,7 +11,7 @@ loadOnce(__DIR__+"/basics.escript");
 		f+=fn(a){out( "x:",a,"\n" );};
 		f+=fn(a){out( "y:",(a+1),"\n" );};
 		f+=fn(a){out( "z:",(a+2),"\n"); return Std.MultiProcedure.REMOVE; }; // removed after one call
-	
+
 		f(27);
 		// x:27
 		// y:28
@@ -51,13 +51,13 @@ T.filter ::= fn(fun){
 };
 
 //!	\see Std.Traits.CallableTrait
-Std.require("Std/Traits/basics").addTrait( T, Std.require("Std/Traits/CallableTrait") );
+Std.require('Std/Traits/basics').addTrait( T, Std.require('Std/Traits/CallableTrait') );
 
 
 Std.MultiProcedure := T;
 
 //// support loading with Std.requireModule and loadOnce.
-//Std._unregisterModule("Std/MultiProcedure"); 
+//Std._unregisterModule("Std/MultiProcedure");
 //Std._registerModule("Std/MultiProcedure",Std.MultiProcedure);
 
 return Std.MultiProcedure;
