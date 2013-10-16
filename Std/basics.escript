@@ -60,6 +60,9 @@ var declareNamespace = fn( ids... ){
 
 declareNamespace($Std);
 Std.declareNamespace := declareNamespace;
+// ------------------------
+
+Std.ABSTRACT_METHOD @(const) := fn(...){	Runtime.exception("This method is not implemented.");	};
 
 // ------------------------------------------
 // module loading
@@ -135,7 +138,7 @@ Std._unregisterModule := [moduleRegistry] => fn(moduleRegistry, String moduleId)
 	moduleRegistry.unset(moduleId);
 };
 
-Std.registerModuleListener := [moduleRegistry,moduleListeners] => fn(String moduleId,callback){
+Std.onModule := [moduleRegistry,moduleListeners] => fn(String moduleId,callback){
 	var module = Std.getModule(moduleId);
 	if(void==module){
 		if(moduleListeners[moduleId])

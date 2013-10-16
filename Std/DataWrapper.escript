@@ -6,62 +6,26 @@
 loadOnce(__DIR__+"/basics.escript");
 
 // Problem: JSONDataWrapper refresh on get
-// map getOrSet(key, default)
+// map getOrSet(key, default)????
+
+var DataWrapper = new Type;
 {
 	/*! A DataWrapper encapsulates a value that can be internally stored as attribute,
 		inside of a JSONValueStore, or which is accessible only by function calls.
 		A DataWrapper provides an unified interface, independently from the real location of the value.
 	*/
-	var T = new Type;
+	var T = DataWrapper;
 	Std.DataWrapper := T;
 	T._printableName @(override) ::= $DataWrapper;
-
-
-	/*! (static) Factory
-		Creates a DataWrapper connected to an object's attribute.
-		\code var someValue = DataWrapper.createFromAttribute( someObject, $attr );
-		\note refreshOnGet is set to true. */
-	T.createFromAttribute ::= fn( obj, Identifier attrName){
-		return new Std.AttributeWrapper(obj,attrName);
-	};
-
-
-	/*! (static) Factory
-		Create a dataWrapper from a pair of functions.
-		\code var someValue = DataWrapper.createFromFunctions( A->fn(){ return this.m1;},  A->fn(newValue){ this.m1 = newValue; } );
-		\param getter Parameterless function called to get the current value
-		\param setter (optional; may be void) Function with one parameter called to set the current value
-		\param _refreshOnGet Iff true, the data is refreshed implicitly (=the getter is called) when calling get().
-				Iff false, the last queried value is returned by get().
-	*/
-	T.createFromFunctions ::= fn(getter, setter = void,_refreshOnGet = false){
-		return new FnDataWrapper(getter,setter,_refreshOnGet);
-	};
-
-	/*! (static) Factory
-		Creates a DataWrapper connected to a collection's entry.
-		\code	var values = { 'foo' : 1, 'bar' : 2 };
-				var someValue = DataWrapper.createFromMapEntry( values, 'foo' );
-		\note refreshOnGet is set to true. */
-	T.createFromCollectionEntry ::= fn(collection, key, defaultValue=void){
-		return new CollectionEntryWrapper(collection,key,defaultValue);
-	};
-
-	//! (static) Factory
-	T.createFromValue ::= fn(value){
-		return new SimpleValueWrapper(value);
-	};
-
-	// --------------
 
 	T.currentValue @(private) := void;
 	T.refreshOnGet @(private) := false;
 
 	//! (internal) ---o
-	T.doGet @(private) ::= 		UserFunction.pleaseImplement;
+	T.doGet @(private) ::= 		Std.ABSTRACT_METHOD;
 
 	//! (internal) ---o
-	T.doSet @(private) ::= 		UserFunction.pleaseImplement;
+	T.doSet @(private) ::= 		Std.ABSTRACT_METHOD;
 
 	//! (internal)
 	T.initCurrentValue @(private) ::= fn(value,_refreshOnGet){
@@ -153,9 +117,9 @@ loadOnce(__DIR__+"/basics.escript");
 }
 // ------------------------------------------
 // (internal) AttributeWrapper ---|> DataWrapper
-Std.AttributeWrapper := new Type(Std.DataWrapper);
 {
-	var T = Std.AttributeWrapper;
+	var T = new Type(DataWrapper);
+	T._printableName @(override) ::= $AttributeWrapper;
 
 	//! ctor
 	T._constructor ::= fn(_obj,Identifier _attr){
@@ -171,14 +135,23 @@ Std.AttributeWrapper := new Type(Std.DataWrapper);
 	T.doSet @(override,private) ::= 	fn(newValue){	obj.assignAttribute(attr, newValue);	};
 
 
+
+	/*! (static) Factory
+		Creates a DataWrapper connected to an object's attribute.
+		\code var someValue = DataWrapper.createFromAttribute( someObject, $attr );
+		\note refreshOnGet is set to true. */
+	DataWrapper.createFromAttribute ::= T->fn( obj, Identifier attrName){
+		return new this(obj,attrName);
+	};
+
 }
 
 // ------------------------------------------
-// (internal) CollectionEntryWrapper ---|> DataWrapper
-Std.CollectionEntryWrapper := new Type(Std.DataWrapper);
+// (internal) EntryWrapper ---|> DataWrapper
 {
-	var T = Std.CollectionEntryWrapper;
-
+	var T = new Type(DataWrapper);
+	
+	T._printableName @(override) ::= $EntryWrapper;
 	//! ctor
 	T._constructor ::= fn(_collection,_key){
 		this.collection @(private) := _collection;
@@ -191,31 +164,25 @@ Std.CollectionEntryWrapper := new Type(Std.DataWrapper);
 
 	//! ---|> DataWrapper
 	T.doSet @(override,private) ::= 	fn(newValue){	collection[key] = newValue;	};
+	
+	/*! (static) Factory
+		Creates a DataWrapper connected to a collection's entry.
+		\code	var values = { 'foo' : 1, 'bar' : 2 };
+				var someValue = DataWrapper.createFromEntry( values, key, 'foo' );
+		\note refreshOnGet is set to true. */
+	DataWrapper.createFromEntry ::= T->fn(collection, key, defaultValue=void){
+		//! \todo query collectionInterface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+		
+		return new this(collection,key,defaultValue);
+	};
+
 }
 
 // ------------------------------------------
-//// (internal) ConfigEntryWrapper ---|> DataWrapper
-//Std.ConfigEntryWrapper ::= new Type(Std.DataWrapper);
-//var ConfigEntryWrapper = DataWrapper.ConfigEntryWrapper;
-//
-////! ctor
-//ConfigEntryWrapper._constructor ::= fn(ConfigManager _config,String _key,defaultValue,Bool _refreshOnGet){
-//	this.config @(private) := _config;
-//	this.key @(private) := _key;
-//	initCurrentValue(config.getValue(key,defaultValue),_refreshOnGet);
-//};
-////! ---|> DataWrapper
-//ConfigEntryWrapper.doGet @(override,private) ::= fn(){	return config.getValue(key);	};
-//
-////! ---|> DataWrapper
-//ConfigEntryWrapper.doSet @(override,private) ::= fn(newValue){	config.setValue(key,newValue);	};
-
-// ------------------------------------------
 // (internal) SimpleValueWrapper ---|> DataWrapper
-Std.SimpleValueWrapper := new Type(Std.DataWrapper);
 {
-	var T = Std.SimpleValueWrapper;
-
+	var T = new Type(DataWrapper);
+	T._printableName @(override) ::= $SimpleValueWrapper;
 	//! ctor
 	T._constructor ::= fn(_value){
 		initCurrentValue(_value,false);
@@ -225,28 +192,44 @@ Std.SimpleValueWrapper := new Type(Std.DataWrapper);
 
 	//! ---|> DataWrapper
 	T.doSet @(override,private) ::= fn(newValue){ currentValue = newValue; };
+	
+	//! (static) Factory
+	T.createFromValue ::= T->fn(value){
+		return new this(value);
+	};
 }
 
 // ------------------------------------------
 // (internal) FnDataWrapper ---|> DataWrapper
-DataWrapper.FnDataWrapper ::= new Type(DataWrapper);
-var FnDataWrapper = DataWrapper.FnDataWrapper;
+{
+	var T = new Type(DataWrapper);
+	T._printableName @(override) ::= $FnDataWrapper;
+	//! ctor
+	T._constructor ::= fn(_getter,_setter,Bool _refreshOnGet){
+		this.doGet @(override,private) := _getter;
+		this.doSet @(override,private) := _setter ? _setter : fn(data){ }; // ignore
+		initCurrentValue(doGet(),_refreshOnGet);
+	};
 
-//! ctor
-FnDataWrapper._constructor ::= fn(_getter,_setter,Bool _refreshOnGet){
-	this.doGet @(override,private) := _getter;
-	this.doSet @(override,private) := _setter ? _setter : fn(data){ }; // ignore
-	initCurrentValue(doGet(),_refreshOnGet);
-};
-
-
+	/*! (static) Factory
+		Create a dataWrapper from a pair of functions.
+		\code var someValue = Std.DataWrapper.createFromFunctions( A->fn(){ return this.m1;},  A->fn(newValue){ this.m1 = newValue; } );
+		\param getter Parameterless function called to get the current value
+		\param setter (optional; may be void) Function with one parameter called to set the current value
+		\param _refreshOnGet Iff true, the data is refreshed implicitly (=the getter is called) when calling get().
+				Iff false, the last queried value is returned by get().
+	*/
+	DataWrapper.createFromFunctions ::= T->fn(getter, setter = void,_refreshOnGet = false){
+		return new this(getter,setter,_refreshOnGet);
+	};
+}
 
 
 
 
 
 // Std._registerModuleResult("Std/DataWrapper",Std.DataWrapper); // support loading with Std.requireModule and loadOnce.
-Std._markAsLoaded(__DIR__,__FILE__);
+//Std._markAsLoaded(__DIR__,__FILE__);
 
 return DataWrapper;
 

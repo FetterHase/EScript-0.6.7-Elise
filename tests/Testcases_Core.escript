@@ -124,6 +124,7 @@ var FAILED="\t failed\n";
 		&& void == "bar"[3]
 		&& mystring*3 == "bl\"#2bl\"#2bl\"#2" && !s.endsWith("\0")
 		&& s.endsWith("bar")&&!s.endsWith("b")&&s.beginsWith("foo")&& s.beginsWith(s)&&  !s.beginsWith(s+s)
+		&& !"a".endsWith("foo") // subject is shorter than search
 		&& s.contains("ob") && !s.contains("oc") && "f".getType()==String
 		&& "a,b,c".split(",",2) == ["a","b,c"] && "/".split("/") == ["",""]
 		&& "bla".fillUp(10,'.') == "bla......." && "x".fillUp(100,"") == "x" && "x".fillUp(4,"12") == "x1212"
@@ -704,12 +705,6 @@ if(!benchmark)
 	&& b.toString().contains("MyUserdefinedA")
 	&& b.isSetLocally($a) && !b.isSetLocally($c) && A.isSetLocally($c) && B.isSetLocally($a)
 	&& A.getLocalAttribute($a)==1 && B.getLocalAttribute($a)==2 && b.getLocalAttribute($a)==2
-		
-	&& b ---|> B && b---|>A && !(a---|>B) 
-	&& B---|>Type && !(B---|>A) 
-	&& B.hasBase(A) && !A.hasBase(B) && B.hasBase(B) && B.hasBase(Object)
-	&& A.isBaseOf(B)&& !B.isBaseOf(A) && B.isBaseOf(B) && Object.isBaseOf(B)
-	&& 1 ---|> Number && (1).getType()---|>Type
 	)
 		{out (OK);}else { errors+=1; out(FAILED); }
 

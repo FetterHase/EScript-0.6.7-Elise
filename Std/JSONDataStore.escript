@@ -151,7 +151,7 @@ T.unset ::= fn(key){
 T._get ::= T.get;
 T._set ::= T.set;
 
-Std.Traits.addTrait( T, Std.Traits.JSONDataStore );
+//Std.Traits.addTrait( T, Std.Traits.JSONDataStore );
 
 
 return T;

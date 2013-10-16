@@ -51,7 +51,9 @@ T.filter ::= fn(fun){
 };
 
 //!	\see Std.Traits.CallableTrait
-Std.require('Std/Traits/basics').addTrait( T, Std.require('Std/Traits/CallableTrait') );
+Std.onModule('Std/Traits/CallableTrait', [T] => fn(MultiProcedure, CallableTrait){
+	Std.require('Std/Traits/basics').addTrait( MultiProcedure, CallableTrait );
+});
 
 
 Std.MultiProcedure := T;
