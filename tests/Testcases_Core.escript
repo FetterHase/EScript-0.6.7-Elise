@@ -704,6 +704,12 @@ if(!benchmark)
 	&& b.toString().contains("MyUserdefinedA")
 	&& b.isSetLocally($a) && !b.isSetLocally($c) && A.isSetLocally($c) && B.isSetLocally($a)
 	&& A.getLocalAttribute($a)==1 && B.getLocalAttribute($a)==2 && b.getLocalAttribute($a)==2
+		
+	&& b ---|> B && b---|>A && !(a---|>B) 
+	&& B---|>Type && !(B---|>A) 
+	&& B.hasBase(A) && !A.hasBase(B) && B.hasBase(B) && B.hasBase(Object)
+	&& A.isBaseOf(B)&& !B.isBaseOf(A) && B.isBaseOf(B) && Object.isBaseOf(B)
+	&& 1 ---|> Number && (1).getType()---|>Type
 	)
 		{out (OK);}else { errors+=1; out(FAILED); }
 
