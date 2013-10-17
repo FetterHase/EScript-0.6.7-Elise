@@ -3,25 +3,75 @@ Std.addModuleSearchPath(".");
 
 {
 	var MultiProcedure = Std.require('Std/MultiProcedure');
-
+	var ok = true;
+	
 	var p1 = new MultiProcedure;
-	p1 += fn(p...){
-		outln(p...);
-	};
-	p1(1,2,3);
+	ok &= p1.empty();
+	ok &= p1.count()==0;
+	p1 += fn(result, v){	result += v;	};
+	p1 += fn(result, v){	result += v*10;	return $REMOVE;	};
+	var f1 = fn(result, v){	result += v*100;	};
+	p1 += f1;
+	ok &= !p1.empty();
+	ok &= p1.count()==3;
 
-	test("Std.MultiProcedure",
-		Std.MultiProcedure == MultiProcedure  &&
-		true );
+	var result = [];
+
+	p1(result,7);
+	ok &= (result == [7,70,700]);
+	// the second procedure has been removed
+	result.clear();
+	p1(result,8);
+	ok &= (result == [8,800]);
+	
+	// remove f1
+	var p2 = p1.clone();
+	p1.filter( [f1]=>fn(f1,fun){	return f1!=fun;	}); 
+	result.clear();
+	p1(result,9);
+	ok &= (result == [9]);
+	
+	result.clear();
+	p2(result,1);
+	ok &= (result == [1,100]);
+
+	// calling object
+	p1.clear();
+	p1 += fn(result){	result+=this;	};
+	result.clear();
+	("Foo"->p1)(result);
+	ok &= (result == ["Foo"]);
+
+	test("Std.MultiProcedure", Std.MultiProcedure == MultiProcedure  && ok);
 }
 {
 	var Set = Std.require('Std/Set');
 
-	var s1 = new Set;
+	var ok = true;
+	var s1 = new Set(4,5,1,3,4);
 
-	test("Std.Set",
-		Std.Set == Set  &&
-		true );
+	var s2 = new Set(1,3,4,7);
+	var s3 = s2.clone();
+	s2+=5;
+	s2-=7;
+	
+	var s4 = new Set("foo","blub");
+	var s5 = new Set("foo","bar");
+	
+	var s6 = s4|s5;
+	s4|=s5;
+	
+	ok &= 	s1==s2 && s1!=s3 && s1.count()==4 && s4==new Set("foo","blub","bar") && s4==s6 && s5!=s6 &&
+			(s1 & new Set(3,4,9,"bla")) == new Set(3,4) &&
+			s1.getSubstracted(new Set(3,4,9,"bla")) == new Set(1,5);
+	
+	
+	var sum=0;
+	foreach(s1 as var value)
+		sum+=value;
+	ok &= (sum==1+3+4+5);
+
+	test("Std.Set",	Std.Set == Set  && ok );
 }
 {
 	var PriorityQueue = Std.require('Std/PriorityQueue');
@@ -75,33 +125,6 @@ Std.addModuleSearchPath(".");
 		true );
 }
 
-
-// var s1 = new Set(4,5,1,3,4);
-
-	// var s2 = new Set(1,3,4,7);
-	// var s3 = s2.clone();
-	// s2+=5;
-	// s2-=7;
-	
-	// var s4 = new Set("foo","blub");
-	// var s5 = new Set("foo","bar");
-	
-	// var s6 = s4|s5;
-	// s4|=s5;
-	
-	
-	// addResult("Basics",s1==s2 && s1!=s3 && s1.count()==4 && s4==new Set("foo","blub","bar") && s4==s6 && s5!=s6
-			// && (s1 & new Set(3,4,9,"bla")) == new Set(3,4)
-			// && s1.getSubstracted(new Set(3,4,9,"bla")) == new Set(1,5));
-	
-	
-	// var sum=0;
-	// foreach(s1 as var value)
-		// sum+=value;
-	
-	// // \todo s1.max() does not work because s1 internally is an ExtObject, altough it should be a Collection object (which doesn't work).
-	
-	// addResult("Iterators", sum==1+3+4+5);
 // loadOnce("LibUtilExt/DataWrapper.escript");
 
 	// {

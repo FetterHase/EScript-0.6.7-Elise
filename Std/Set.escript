@@ -21,6 +21,10 @@ T._constructor ::= fn( values... ){
 		this += v;
 };
 
+T._accessData ::= fn(){
+	return this.data;
+};
+
 T.add ::= fn(value){
 	this.data[value]=value;
 	return this;
@@ -31,7 +35,7 @@ T.clear ::= fn(){
 };
 T.clone ::= fn(){
 	var c = new (this.getType());
-	c.data = this.data.clone();
+	(c->fn(clonedData){ this.data = clonedData;})(this.data.clone());
 	return c;
 };
 T.contains ::= fn(value){
@@ -66,11 +70,11 @@ T.getSubstracted ::= fn(Std.Set other){
 	return a.substract(other);
 };
 T.intersect ::= fn(Std.Set other){
-	s.swap(getIntersection(other));
+	this.swap(getIntersection(other)); 
 	return this;
 };
-T.merge ::= fn(Set other){
-	data.merge(other.data);
+T.merge ::= fn(Std.Set other){
+	this.data.merge(other._accessData());
 	return this;
 };
 T.remove ::= fn(value){
@@ -84,7 +88,7 @@ T.substract ::= fn(Std.Set other){
 };
 T.toArray ::= fn(){
 	var a = [];
-	foreach(data as var value,var dummy)
+	foreach(this.data as var value,var dummy)
 		a+=value;
 	return a;
 };
@@ -100,7 +104,7 @@ T."&=" ::= T.intersect;
 T."&" ::= T.getIntersection;
 
 T."==" ::= fn(other){
-	return (other---|>(this.getType())) ? (data==other.data) : false;
+	return (other---|>(this.getType())) ? (data==other._accessData()) : false;
 };
 
 Std._registerModule('Std/Set',T); // support loading with Std.requireModule and loadOnce.

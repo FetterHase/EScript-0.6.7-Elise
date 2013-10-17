@@ -39,7 +39,7 @@ T."+=" ::= fn(f){	this.functions += f;	};
 T.accessFunctions ::= fn(){	return functions;	};
 T.clear ::= fn(){	return functions.clear();	};
 T.clone ::= fn(){
-	var other = new this.getType();
+	var other = new (this.getType());
 	(other->fn(f){	functions = f;	})(functions.clone());
 	return other;
 };
