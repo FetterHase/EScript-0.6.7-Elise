@@ -132,14 +132,4 @@ Number.setBitMask ::= fn(Number mask,Bool b=true){
 	return b ? (this|mask) : (this^(this&mask));
 };
 
-
-// -------------------------------------
-// Function extensions 
-
-
-//! Use this method as way to show that a member function has to be implemented by an inheriting Type (kind of 'pure virtual').
-UserFunction.pleaseImplement ::= fn(...){	Runtime.exception("This method is not implemented. Implement in subtype, or do not call!");	};
-
-
-
 // ------------------------------------------

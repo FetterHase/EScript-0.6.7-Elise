@@ -81,7 +81,7 @@ Std.addModuleSearchPath := [moduleSearchPaths] => fn(moduleSearchPaths, String p
 		moduleSearchPaths+= path;
 };
 
-Std.getModule := [moduleRegistry] => fn(String moduleId){
+Std.getModule := [moduleRegistry] => fn(moduleRegistry, String moduleId){
 	var module = moduleRegistry.get(moduleId);
 	return module==$__INVALID_MODULE ? void : module;
 };
@@ -138,7 +138,7 @@ Std._unregisterModule := [moduleRegistry] => fn(moduleRegistry, String moduleId)
 	moduleRegistry.unset(moduleId);
 };
 
-Std.onModule := [moduleRegistry,moduleListeners] => fn(String moduleId,callback){
+Std.onModule := [moduleRegistry,moduleListeners] => fn(moduleRegistry,moduleListeners, String moduleId,callback){
 	var module = Std.getModule(moduleId);
 	if(void==module){
 		if(moduleListeners[moduleId])

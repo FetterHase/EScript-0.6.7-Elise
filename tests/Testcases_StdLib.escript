@@ -26,10 +26,52 @@ Std.addModuleSearchPath(".");
 {
 	var PriorityQueue = Std.require('Std/PriorityQueue');
 
-	var s1 = new PriorityQueue;
+	var ok = true;
+	var q = new PriorityQueue;
+	ok &= q.empty();
+	
+	{
+		var r = new Math.RandomNumberGenerator;
+		for(var i=0;i<50;++i)
+			q += r.equilikely(0,30);
+		
+		ok &= q.count() == 50;
+		var n = 0;
+		for(var i=0;i<10;++i){
+			var n2 = q.extract();
+			ok &= n2>=n;
+			n = n2;
+		}
+		ok &= q.count() == 40;
+		for(var i=0;i<10;++i)
+			q += r.equilikely(0,30);
+		ok &= q.count() == 50;
+	
+		n = 0;
+		while(!q.empty()){
+			var n2 = q.extract();
+			ok &= n2>=n;
+			n = n2;
+		}
+	}
+	{
+		var arr = [4,7,1,3];
+		foreach(arr as var n2)
+			q += n2;
+		var q2 = q.clone();
+		arr.sort();
+		while(!q.empty()){
+			var n2 = q.extract();
+			ok &= n2 == q2.extract() && n2 == arr.popFront();
+		}
+	}
+	q += 2;
+	q.clear();
+	ok &= q.empty();
 
 	test("Std.PriorityQueue",
 		Std.PriorityQueue == PriorityQueue  &&
+		ok &&
 		true );
 }
 

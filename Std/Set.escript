@@ -103,7 +103,7 @@ T."==" ::= fn(other){
 	return (other---|>(this.getType())) ? (data==other.data) : false;
 };
 
-Std._registerModule("Std/Set",T); // support loading with Std.requireModule and loadOnce.
+Std._registerModule('Std/Set',T); // support loading with Std.requireModule and loadOnce.
 return T;
 
 // ------------------------------------------

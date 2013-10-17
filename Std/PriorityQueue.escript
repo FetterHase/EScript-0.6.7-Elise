@@ -13,9 +13,8 @@ T._printableName @(override) ::= $PriorityQueue;
 T.compare @(private) := void;
 T.arr @(private,init) := Array;
 
-/*! (ctor) */
-T._constructor ::= fn( compareFunction = (fn(a,b){return a<b;}) ){
-	compare = compareFunction;
+T._constructor ::= fn( compareFunction = fn(a,b){return a<b;} ){
+	this.compare = compareFunction;
 };
 
 T.add ::= fn(e){
@@ -37,6 +36,12 @@ T."+=" ::= T.add; // alias
 T.count ::=			fn(){	return arr.count();	};
 T.empty ::=			fn(){	return arr.empty();	};
 T.clear ::=			fn(){	return arr.clear();	};
+T.clone ::= fn(){
+	var q = new (this.getType())(this.compare);
+	(q->fn(clonedArr){	this.arr = clonedArr;}) (this.arr.clone());
+	return q;
+};
+
 T.get ::=			fn(){	return arr.empty() ? void : arr[0];	};
 T.extract ::= fn(){
 	var size = arr.count();
@@ -51,7 +56,7 @@ T.extract ::= fn(){
 		return min;
 	} else return void;
 };
-T.heapify ::= fn(i){
+T.heapify @(private) ::= fn(i){
 	var left = ((i+1)*2)-1;
 	var size = arr.count();
 	if(left<size){
@@ -63,7 +68,6 @@ T.heapify ::= fn(i){
 		if(right<size && compare(arr[right],arr[minI]))
 			minI = right;
 		if(minI!=i){
-//			swap(i,minI);
 			var tmp = arr[i];
 			arr[i] = arr[minI];
 			arr[minI] = tmp;
@@ -72,5 +76,5 @@ T.heapify ::= fn(i){
 	}
 };
 
-// Std._registerModuleResult("Std/PriorityQueue",T); // support loading with Std.requireModule and loadOnce.
+Std._registerModule('Std/PriorityQueue',T); // support loading with Std.requireModule and loadOnce.
 return T;
