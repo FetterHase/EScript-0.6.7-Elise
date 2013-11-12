@@ -5,7 +5,6 @@
 
 loadOnce(__DIR__+"/basics.escript");
 
-
 // ----------------------------------------------------------------------------------------------------
 // DataWrapperContainer
 
@@ -32,12 +31,20 @@ T.assign ::= fn(Map _values,warnOnUnknownKey = true){
 
 T.clear ::= fn(){
 	foreach(this.dataWrappers as var dataWrapper)
-		dataWrapper.onDataChanged.filter(this->fn(fun){		return !(fun---|>UserFunction && fun.getBoundParams()[0]==this);	});
+		detachDataWrapperSubscription(dataWrapper);
 	this.dataWrappers.clear();
 	return this;
 };
 
 T.count ::=			fn(){	dataWrappers.count();	};
+
+//! (internal)
+T.detachDataWrapperSubscription @(private) ::= fn(dataWrapper){
+	dataWrapper.onDataChanged.filter(
+		this->fn(fun){
+			return !(fun.isSet($dataWrapperContainer) && this==fun.dataWrapperContainer);
+		});
+};
 
 //! Call to remove all cycling dependencies with the contained DataWrappers
 T.destroy ::= fn(){
@@ -101,9 +108,7 @@ T.setValue ::= fn(key,value,warnOnUnknownKey = true){
 T.unset ::= fn(key){
 	var dataWrapper = this.dataWrappers[key];
 	if(dataWrapper){
-		dataWrapper.onDataChanged.filter(this->fn(fun){
-			return !(fun.isSet($dataWrapperContainer) && fun.dataWrapperContainer==this);
-		});
+		this.detachDataWrapperSubscription(dataWrapper);
 	}
 	return this;
 };

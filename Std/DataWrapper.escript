@@ -42,7 +42,7 @@ var DataWrapper = new Type;
 	};
 
 	//! Like refresh(), but always calls onDataChanged(newData) even if the value didn't change.
-	t.forceRefresh ::= fn(){
+	T.forceRefresh ::= fn(){
 		currentValue = doGet();
 		onDataChanged(currentValue);
 	};
@@ -52,7 +52,7 @@ var DataWrapper = new Type;
 		\code
 			myDataWrapper += fn(newData){	out("The value is now:",newData); };
 	*/
-	T.onDataChanged @(init) := MultiProcedure;
+	T.onDataChanged @(init) := Std.require('Std/MultiProcedure');
 
 	/*! Refresh the internal data from the dataWrapper's data source. If the data has changed,
 		onDataChanged(newData) is called. This function has only to be called  manually if the connected data may change externally.*/
@@ -81,39 +81,10 @@ var DataWrapper = new Type;
 			myDataWrapper(10);  // is the same as myDataWrapper.set(10);
 			out( myDataWrapper() ); // outputs '10'. Is the same as out( myDataWrapper.get() );
 	*/
-	Std.require('Std/Traits/basics').addTrait(T,Std.require('Std/Traits/CallableTraits'),fn(obj,params...){
+	Std.require('Std/Traits/basics').addTrait(T,Std.require('Std/Traits/CallableTrait'),fn(obj,params...){
 		return params.empty() ? this.get() : this.set(params...);
 	});
 
-	// ---------------
-	// Options represent typical values for the dataWrapper. They are mainly used to automatically fill the corresponding field in a corresponding gui component.
-
-	//! Returns an array of possible default values
-	T.getOptions ::= fn(){
-		return this.isSet($_options) ?
-			(this._options---|>Array ? this._options.clone() : (this->this._options) () ) : [];
-	};
-
-	//! Returns if the dataWrapper has possible default values
-	T.hasOptions ::= fn(){
-		return this.isSet($_options);
-	};
-
-	//! Set an Array of possible default values. Returns this.
-	T.setOptions ::= fn(Array options){
-		this._options @(private) := options.clone();
-		return this;
-	};
-
-	/*! Set a function providing options (caller is the DataWrapper, must return an Array).
-		\code
-			var myDataWrapper = Std.DataWrapper.createFromValue(5).setOptionsProvider( fn(){ return [this(),this()*2] } );
-			print_r(myDataWrapper.getOptions()); // [5,10]
-	*/
-	T.setOptionsProvider ::= fn(callable){
-		this._options @(private) := callable;
-		return this;
-	};
 }
 // ------------------------------------------
 // (internal) AttributeWrapper ---|> DataWrapper
@@ -150,12 +121,14 @@ var DataWrapper = new Type;
 // (internal) EntryWrapper ---|> DataWrapper
 {
 	var T = new Type(DataWrapper);
-	
+
 	T._printableName @(override) ::= $EntryWrapper;
 	//! ctor
-	T._constructor ::= fn(_collection,_key){
+	T._constructor ::= fn(_collection,_key,defaultValue=void){
 		this.collection @(private) := _collection;
 		this.key @(private) := _key;
+		if(void==_collection[_key]&&void!=defaultValue)
+			_collection[_key] = defaultValue;
 		this.initCurrentValue(doGet(),true);
 	};
 
@@ -164,7 +137,7 @@ var DataWrapper = new Type;
 
 	//! ---|> DataWrapper
 	T.doSet @(override,private) ::= 	fn(newValue){	collection[key] = newValue;	};
-	
+
 	/*! (static) Factory
 		Creates a DataWrapper connected to a collection's entry.
 		\code	var values = { 'foo' : 1, 'bar' : 2 };
@@ -172,7 +145,7 @@ var DataWrapper = new Type;
 		\note refreshOnGet is set to true. */
 	DataWrapper.createFromEntry ::= T->fn(collection, key, defaultValue=void){
 		//! \todo query collectionInterface !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-		
+
 		return new this(collection,key,defaultValue);
 	};
 
@@ -192,9 +165,9 @@ var DataWrapper = new Type;
 
 	//! ---|> DataWrapper
 	T.doSet @(override,private) ::= fn(newValue){ currentValue = newValue; };
-	
+
 	//! (static) Factory
-	T.createFromValue ::= T->fn(value){
+	DataWrapper.createFromValue ::= T->fn(value){
 		return new this(value);
 	};
 }
@@ -230,123 +203,6 @@ var DataWrapper = new Type;
 
 // Std._registerModuleResult("Std/DataWrapper",Std.DataWrapper); // support loading with Std.requireModule and loadOnce.
 //Std._markAsLoaded(__DIR__,__FILE__);
+Std._registerModule('Std/DataWrapper',DataWrapper); // support loading with Std.requireModule and loadOnce.
 
 return DataWrapper;
-
-// ----------------------------------------------------------------------------------------------------
-// DataWrapperContainer   !!!!!!!EXPERIMENTAL!!!!!!!!!!!
-
-GLOBALS.DataWrapperContainer := new Type;
-DataWrapperContainer._printableName @(override) ::= $DataWrapperContainer;
-
-DataWrapperContainer.dataWrappers @(init,private) := Map;
-
-//! ---o
-DataWrapperContainer.onDataChanged @(init) := MultiProcedure;
-
-/*! (ctor) */
-DataWrapperContainer._constructor ::= fn([void,Map] source=void){
-    if(source)
-        this.merge(source);
-};
-
-DataWrapperContainer.assign ::= fn(Map _values,warnOnUnknownKey = true){
-	foreach(_values as var key,var value)
-		this.setValue(key,value,warnOnUnknownKey);
-	return this;
-};
-
-DataWrapperContainer.clear ::= fn(){
-	foreach(this.dataWrappers as var dataWrapper)
-		dataWrapper.onDataChanged.filter(this->fn(fun){		return !(fun---|>UserFunction && fun.getBoundParams()[0]==this);	});
-	this.dataWrappers.clear();
-	return this;
-};
-
-DataWrapperContainer.count ::=			fn(){	dataWrappers.count();	};
-
-//! Call to remove all cycling dependencies with the contained DataWrappers
-DataWrapperContainer.destroy ::= fn(){
-	this.clear();
-	this.dataWrappers = void; // prevent further usage.
-	return this;
-};
-DataWrapperContainer.empty ::=			fn(){	this.dataWrappers.empty();	};
-DataWrapperContainer.getValue ::= fn(key,defaultValue = void){
-	var dataWrapper = this.dataWrappers[key];
-	return dataWrapper ? dataWrapper() : defaultValue;
-};
-DataWrapperContainer.getDataWrapper ::= fn(key){	return this.dataWrappers[key];	};
-DataWrapperContainer.getDataWrappers ::= fn(){	return this.dataWrappers.clone();	};
-
-DataWrapperContainer.getValues ::= fn(){
-	var m = new Map;
-	foreach(this.dataWrappers as var key,var dataWrapper)
-		m[key] = dataWrapper();
-	return m;
-};
-DataWrapperContainer.containsKey ::= fn(key){
-	return this.dataWrappers.containsKey(key);
-};
-DataWrapperContainer.merge ::= fn(Map _dataWrappers){
-	foreach(_dataWrappers as var key,var dataWrapper)
-		this.addDataWrapper(key,dataWrapper);
-	return this;
-};
-
-/*! Add a new Datawrapper with the given key.
-	\note calles onDataChanged(key, valueOfTheDataWrapper)	*/
-DataWrapperContainer.addDataWrapper ::= fn(key, DataWrapper dataWrapper){
-	if(this.dataWrappers[key])
-		this.unset(key);
-	this.dataWrappers[key] = dataWrapper;
-	// it is important that the first parameter bound is this object as it is used to identify the function on removal.
-	dataWrapper.onDataChanged += (fn(container,key,value){
-		container.onDataChanged(key,value);
-	}).bindFirstParams(this,key);
-	this.onDataChanged(key,dataWrapper());
-	return this;
-};
-
-DataWrapperContainer.setValue ::= fn(key,value,warnOnUnknownKey = true){
-	var dataWrapper = this.dataWrappers[key];
-	if(dataWrapper){
-		dataWrapper(value);
-	}else{
-		if(warnOnUnknownKey)
-			Runtime.warn("DataWrapperContainer.setValue(...) unknown entry '"+key+"'.");
-	}
-	return this;
-};
-
-DataWrapperContainer.unset ::= fn(key){
-	var dataWrapper =this. dataWrappers[key];
-	if(dataWrapper){
-		dataWrapper.onDataChanged.filter(this->fn(fun){
-			return !(fun---|>UserFunction && fun.getBoundParams()[0]==this);
-		});
-	}
-	return this;
-};
-
-DataWrapperContainer._get ::= DataWrapperContainer.getValue;
-DataWrapperContainer._set ::= fn(key,value){
-	this.setValue(key,value);
-	return value;
-};
-
-DataWrapperContainer.getIterator ::= fn(){
-	var mapIterator = this.dataWrappers.getIterator();
-
-	var it = new ExtObject;
-	it.end := mapIterator->mapIterator.end;
-	it.next := mapIterator->mapIterator.next;
-	it.key := mapIterator->mapIterator.key;
-	it.value := mapIterator->fn(){
-		var v = this.value();
-		return v ? v() : void;
-	};
-	return it;
-
-};
-

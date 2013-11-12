@@ -115,7 +115,7 @@ Std.require := [loader,moduleRegistry,moduleListeners] => fn(loader,moduleRegist
 		var callbacks = moduleListeners[moduleId];
 		if(callbacks){
 			moduleListeners[moduleId] = void;
-			foreach(callbas as var fun)
+			foreach(callbacks as var fun)
 				fun(module);
 		}
 	}

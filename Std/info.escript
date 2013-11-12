@@ -3,7 +3,7 @@
 // See copyright notice in basics.escript
 // ------------------------------------------------------
 
-loadOnce(__DIR__+"/TypeBasedHandler.escript");
+loadOnce(__DIR__ + "/basics.escript");
 
 // -------------------------------------
 // info
@@ -13,31 +13,52 @@ loadOnce(__DIR__+"/TypeBasedHandler.escript");
 	\code info( 1.getType() );
 	\code info( 1.getType().getBaseType() );
 
-	To add a custom information provider for a specific type, call 
+	To add a custom information provider for a specific type, call
 	\code info += [ MyType, fn(objOfMyType,Array results){ results += "AdditionalInfo: "+objOfMyType.getSpecificInfo(); }];
-	
-	To add an additional short info to a function, you can call 
+
+	To add an additional short info to a function, you can call
 	\code myFunction._shortInfo := "Some short usage hint.";
-	
+
 	To get the info instead of directly printing it, use info.get( obj );
 */
-GLOBALS.info := new ExtObject;
+Std.info := new ExtObject;
+
+var info = Std.info;
 
 info._shortInfo := "Call to print information on the given object.";
-info.handler := new TypeBasedHandler(true);
+info.registry @(private) := new Map;
 info._call := fn( caller, obj ){
-	outln(get(obj));
+	outln("-"*50,"\n",this.get(obj).implode("\n"));
 };
-info."+=" := info.handler->info.handler."+=";
-
-info.get := fn(obj){
-	var result = ["-"*50]; 
+info."+=" := fn(arr){
+	this.registry[arr[0]] = arr[1];
+	return this;
+};
+/* stereo
+	mode: left, right, sideBySide, crossEye
+	setRightEyeOffset
+	enableRightRye
+	enableLeftRye
+	sideBySideEnabled = dataWrapper
+	*/
+info.get := fn(obj,type = void){
+	var result = [];
 	if(void===obj){ // special case!
 		result += "This object is Void -- the empty object. ";
 	}else{
-		handler(obj,result); 
+		var handlers = [];
+		if(!type)
+			type = obj.getType();
+		for(;type;type=type.getBaseType()){
+			if(registry[type]){
+				registry[type](obj,result);
+				break;
+			}
+		}else{
+			result += "???" + obj.toDbgString();
+		}
 	}
-	return result.implode("\n");
+	return result;
 };
 
 info.getShortDescription := fn(obj){
@@ -65,7 +86,7 @@ info+=[Object,fn(obj,Array result){
 	for(var type = obj.getType();type;type = type.getBaseType())
 		types += type;
 	result += "Types: " + types.implode(" ---|> ") ;
-		
+
 }];
 
 info+=[Number,fn(obj,Array result){
@@ -77,7 +98,7 @@ info+=[Bool,fn(obj,Array result){
 }];
 
 info+=[String,fn(obj,Array result){
-	result += "This object is of the integral value-type String. " + 
+	result += "This object is of the integral value-type String. " +
 		"The string's length is "+obj.length()+".";
 }];
 
@@ -87,7 +108,7 @@ info+=[Type,fn(obj,Array result){
 	for(var type = obj;type;type = type.getBaseType())
 		types += type;
 	result += "Inheritance: " + types.implode(" ---|> ") ;
-	
+
 	var attributes = obj._getAttributes();
 	if(!attributes.empty()){
 		result += "Attributes (" + attributes.count() + "):\n------------";
@@ -156,14 +177,18 @@ info+=[UserFunction,fn(obj,Array result){
 	result += "This object is an UserFunction expecting "+obj.getMinParamCount()+" to "+obj.getMaxParamCount()+" parameters.";
 	result += "It is defined in the file '"+obj.getFilename()+"'.";
 }];
+//
+//info += [Set,fn(obj,Array result){
+//
+//	result += "------------";
+//	result += "Set-content: ";
+//	result += "{";
+//	foreach(obj as var entry){
+//		result += "\t" + entry;
+//	}
+//	result += "}";
+//}];
 
-info += [Set,fn(obj,Array result){
+Std._registerModule('Std/info',info); // support loading with Std.requireModule and loadOnce.
 
-	result += "------------";
-	result += "Set-content: ";
-	result += "{";
-	foreach(obj as var entry){
-		result += "\t" + entry;
-	}
-	result += "}";
-}];
+return info;
