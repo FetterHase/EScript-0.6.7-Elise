@@ -12,6 +12,24 @@
 
 namespace EScript {
 
+class StaticData : public EReferenceCounter<StaticData> {
+	// code fragment (complete code)
+	// declared strings
+	// declared functions
+	// declared static variables
+	public:
+	std::vector<StringId> staticVariableNames;
+	std::vector<ObjRef> staticVariableValues;
+
+public:
+	uint32_t declareStaticVariable(const StringId & name){
+		staticVariableNames.emplace_back(name);
+		staticVariableValues.emplace_back(nullptr);
+		return static_cast<uint32_t>(staticVariableNames.size()-1);
+	}
+
+};
+
 //! [UserFunction]  ---|> [ExtObject]
 class UserFunction : public ExtObject {
 		ES_PROVIDES_TYPE_NAME(UserFunction)
@@ -32,7 +50,7 @@ class UserFunction : public ExtObject {
 	protected:
 		UserFunction(const UserFunction & other);
 	public:
-		UserFunction();
+		UserFunction(StaticData*);
 		virtual ~UserFunction()	{ }
 
 		const CodeFragment & getCode()const					{	return codeFragment;	}
@@ -54,6 +72,8 @@ class UserFunction : public ExtObject {
 		int getMultiParam()const							{	return multiParam;	}
 		void setMultiParam(int i)							{	multiParam = i;	}
 
+		StaticData* getStaticData()const					{	return staticData.get();	}
+
 		//! ---|> [Object]
 		virtual internalTypeId_t _getInternalTypeId()const	{	return _TypeIds::TYPE_USER_FUNCTION;	}
 		virtual UserFunction * clone()const					{	return new UserFunction(*this);	}
@@ -67,6 +87,7 @@ class UserFunction : public ExtObject {
 		int multiParam;
 
 		InstructionBlock instructions;
+		_CountedRef<StaticData> staticData;
 
 	//	@}
 };
