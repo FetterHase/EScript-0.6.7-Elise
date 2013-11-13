@@ -59,10 +59,9 @@ UserFunction::UserFunction(const UserFunction & other) :
 }
 
 //! (ctor)
-UserFunction::UserFunction(StaticData*cud) :
+UserFunction::UserFunction() :
 		ExtObject(getTypeObject()),line(-1),paramCount(0),
-		minParamValueCount(0),maxParamValueCount(0),multiParam(-1),
-		staticData(cud) {
+		minParamValueCount(0),maxParamValueCount(0),multiParam(-1) {
 	//ctor
 }
 

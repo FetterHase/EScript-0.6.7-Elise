@@ -47,10 +47,10 @@ Compiler::Compiler(Logger * _logger) : logger(_logger ? _logger : new StdLogger(
 
 UserFunction * Compiler::compile(const CodeFragment & code){
 
-	StaticData* cud = new StaticData;
+	_CountedRef<StaticData> staticData = new StaticData;
 
 	// prepare container function
-	ERef<UserFunction> fun = new UserFunction(cud);
+	ERef<UserFunction> fun = new UserFunction;
 	fun->setCode(code);
 
 	// parse and build syntax tree
@@ -63,11 +63,14 @@ UserFunction * Compiler::compile(const CodeFragment & code){
 	outerBlock->addStatement(new AST::ReturnStatement(block.get()));
 
 	// compile and create instructions
-	FunCompileContext ctxt(*this,cud,fun->getInstructionBlock(),code);
+	FunCompileContext ctxt(*this,staticData.get(),fun->getInstructionBlock(),code);
 	ctxt.addExpression(outerBlock.get());
 	Compiler::finalizeInstructions(fun->getInstructionBlock());
-	// todo set static data only if nod needed
-	std::cout << "TODO: set static data to function\n";
+
+	if(ctxt.getUsesStaticVars()){
+		fun->setStaticData(std::move(staticData));
+		std::cout << "Set static data to function\n";
+	}
 
 	return fun.detachAndDecrease();
 }
@@ -731,7 +734,7 @@ bool initHandler(handlerRegistry_t & m){
 	// user function
 	ADD_HANDLER( ASTNode::TYPE_USER_FUNCTION_EXPRESSION, UserFunctionExpr, {
 
-		ERef<UserFunction> fun = new UserFunction(ctxt.getStaticData());
+		ERef<UserFunction> fun = new UserFunction;
 		fun->setCode(self->getCode());
 		fun->setLine(self->getLine());
 
@@ -845,6 +848,11 @@ bool initHandler(handlerRegistry_t & m){
 		ctxt2.addStatement(self->getBlock());
 		ctxt2.popSetting();
 		Compiler::finalizeInstructions(fun->getInstructionBlock());
+		if(ctxt2.getUsesStaticVars()){
+			_CountedRef<StaticData> staticData = ctxt.getStaticData();
+			fun->setStaticData(std::move(staticData));
+			std::cout << "Set static data to function (2)\n";
+		}
 
 		ctxt.addInstruction(Instruction::createPushFunction(ctxt.registerInternalFunction(fun.get())));
 

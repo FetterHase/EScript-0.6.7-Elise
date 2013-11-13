@@ -50,7 +50,7 @@ class UserFunction : public ExtObject {
 	protected:
 		UserFunction(const UserFunction & other);
 	public:
-		UserFunction(StaticData*);
+		UserFunction();
 		virtual ~UserFunction()	{ }
 
 		const CodeFragment & getCode()const					{	return codeFragment;	}
@@ -73,6 +73,7 @@ class UserFunction : public ExtObject {
 		void setMultiParam(int i)							{	multiParam = i;	}
 
 		StaticData* getStaticData()const					{	return staticData.get();	}
+		void setStaticData(_CountedRef<StaticData> && d)	{	staticData = d;	}
 
 		//! ---|> [Object]
 		virtual internalTypeId_t _getInternalTypeId()const	{	return _TypeIds::TYPE_USER_FUNCTION;	}
