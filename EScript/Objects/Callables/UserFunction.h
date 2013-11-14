@@ -12,22 +12,24 @@
 
 namespace EScript {
 
+//! Container for static variables shared among several UserFunctions.
 class StaticData : public EReferenceCounter<StaticData> {
-	// code fragment (complete code)
-	// declared strings
-	// declared functions
-	// declared static variables
+		std::vector<StringId> staticVariableNames; // currently unused!
+		std::vector<ObjRef> staticVariableValues;
+
 	public:
-	std::vector<StringId> staticVariableNames;
-	std::vector<ObjRef> staticVariableValues;
-
-public:
-	uint32_t declareStaticVariable(const StringId & name){
-		staticVariableNames.emplace_back(name);
-		staticVariableValues.emplace_back(nullptr);
-		return static_cast<uint32_t>(staticVariableNames.size()-1);
-	}
-
+		uint32_t declareStaticVariable(const StringId & name){
+			staticVariableNames.emplace_back(name);
+			staticVariableValues.emplace_back(nullptr);
+			return static_cast<uint32_t>(staticVariableNames.size()-1);
+		}
+		const std::vector<ObjRef>& getStaticVariableValues()const{	return	staticVariableValues;	}
+		bool updateStaticVariable(uint32_t index,Object*value){
+			if(index>=staticVariableValues.size())
+				return false;
+			staticVariableValues[index] = value;
+			return true;
+		}
 };
 
 //! [UserFunction]  ---|> [ExtObject]
@@ -83,9 +85,7 @@ class UserFunction : public ExtObject {
 		CodeFragment codeFragment;
 		int line;
 		size_t paramCount;
-		int minParamValueCount;
-		int maxParamValueCount;
-		int multiParam;
+		int minParamValueCount, maxParamValueCount, multiParam;
 
 		InstructionBlock instructions;
 		_CountedRef<StaticData> staticData;

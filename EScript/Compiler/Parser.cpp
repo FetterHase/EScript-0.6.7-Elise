@@ -303,7 +303,6 @@ void Parser::pass_2(ParsingContext & ctxt,
 				/// Static variable Declaration
 				else if(tc->getId()==Consts::IDENTIFIER_static) {
 					if(TIdentifier * ti = Token::cast<TIdentifier>(ctxt.tokens.at(cursor+1))) {
-						std::cout << "Declare static var:"<<ti->toString()<<":"<<__FILE__<<":"<<__LINE__<<std::endl;
 						if(!blockStack.top()->declareStaticVar(ti->getId())){
 							log(ctxt,Logger::LOG_WARNING, "Duplicate static variable '"+ti->toString()+'\'',ti);
 						}

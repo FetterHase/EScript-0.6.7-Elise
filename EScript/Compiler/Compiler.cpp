@@ -47,29 +47,29 @@ Compiler::Compiler(Logger * _logger) : logger(_logger ? _logger : new StdLogger(
 
 UserFunction * Compiler::compile(const CodeFragment & code){
 
-	_CountedRef<StaticData> staticData = new StaticData;
+	ERef<AST::Block> syntaxTreeRoot(AST::Block::createBlockStatement());
 
-	// prepare container function
+	{// parse code and build syntax tree
+		Parser p(getLogger());
+		ERef<AST::Block> block = p.parse(code);
+		block->convertToExpression();
+
+		// syntaxTreeRoot's outer Block is used to add a return statement: {return {block}}
+		syntaxTreeRoot->addStatement(new AST::ReturnStatement(block.get()));
+	}
+
+
 	ERef<UserFunction> fun = new UserFunction;
 	fun->setCode(code);
+	{ // compile syntax tree and create instructions
+		_CountedRef<StaticData> staticData = new StaticData;
 
-	// parse and build syntax tree
-	Parser p(getLogger());
-	ERef<AST::Block> block = p.parse(code);
-	block->convertToExpression();
+		FunCompileContext ctxt(*this,*staticData.get(),fun->getInstructionBlock(),code);
+		ctxt.addExpression(syntaxTreeRoot.get());
+		Compiler::finalizeInstructions(fun->getInstructionBlock());
 
-	// outerBlock is used to add a return statement: {return {block}}
-	ERef<AST::Block> outerBlock(AST::Block::createBlockStatement());
-	outerBlock->addStatement(new AST::ReturnStatement(block.get()));
-
-	// compile and create instructions
-	FunCompileContext ctxt(*this,staticData.get(),fun->getInstructionBlock(),code);
-	ctxt.addExpression(outerBlock.get());
-	Compiler::finalizeInstructions(fun->getInstructionBlock());
-
-	if(ctxt.getUsesStaticVars()){
-		fun->setStaticData(std::move(staticData));
-		std::cout << "Set static data to function\n";
+		if(ctxt.getUsesStaticVars())
+			fun->setStaticData(std::move(staticData));
 	}
 
 	return fun.detachAndDecrease();
@@ -849,9 +849,8 @@ bool initHandler(handlerRegistry_t & m){
 		ctxt2.popSetting();
 		Compiler::finalizeInstructions(fun->getInstructionBlock());
 		if(ctxt2.getUsesStaticVars()){
-			_CountedRef<StaticData> staticData = ctxt.getStaticData();
+			_CountedRef<StaticData> staticData = &ctxt.getStaticData();
 			fun->setStaticData(std::move(staticData));
-			std::cout << "Set static data to function (2)\n";
 		}
 
 		ctxt.addInstruction(Instruction::createPushFunction(ctxt.registerInternalFunction(fun.get())));

@@ -107,9 +107,9 @@ class FunctionCallContext:public EReferenceCounter<FunctionCallContext,FunctionC
 		}
 		Object * getStaticVar(const uint32_t index)const{
 			const auto data = userFunction->getStaticData();
-			if(!data ||  index>=data->staticVariableValues.size())
+			if(!data ||  index>=data->getStaticVariableValues().size())
 				throwError(UNKNOWN_STATIC_VARIABLE);
-			return data->staticVariableValues[index].get();
+			return data->getStaticVariableValues()[index].get();
 		}
 		std::string getLocalVariablesAsString(const bool includeUndefined)const;
 		void resetLocalVariable(const uint32_t index){
@@ -122,9 +122,8 @@ class FunctionCallContext:public EReferenceCounter<FunctionCallContext,FunctionC
 		}
 		void setStaticVar(const uint32_t index,Object * value){
 			const auto data = userFunction->getStaticData();
-			if(!data ||  index>=data->staticVariableValues.size())
+			if(!data || !data->updateStaticVariable(index,value))
 				throwError(UNKNOWN_STATIC_VARIABLE);
-			data->staticVariableValues[index]=value;
 		}
 	// @}
 

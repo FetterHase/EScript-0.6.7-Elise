@@ -1098,8 +1098,6 @@ void RuntimeInternals::initSystemFunctions(){
 				auto fcc = rtIt.getActiveFCC();
 				const uint32_t staticVarIdx = fcc->stack_popUInt32();
 				return fcc->getStaticVar(staticVarIdx);
-//				return 42;
-//				}
 			}
 		};
 		systemFunctions[Consts::SYS_CALL_GET_STATIC_VAR] = _::sysCall;
@@ -1110,10 +1108,11 @@ void RuntimeInternals::initSystemFunctions(){
 			ES_SYS_FUNCTION( sysCall ) {
 				auto fcc = rtIt.getActiveFCC();
 				const uint32_t staticVarIdx = fcc->stack_popUInt32();
-				const ObjRef value = fcc->stack_popObject();
+				ObjRef value = fcc->stack_popObject();
+				if(value.isNotNull())
+					value = value->getRefOrCopy();
 				 fcc->setStaticVar(staticVarIdx,value.get());
-				return nullptr; // value
-//				}
+				return nullptr;
 			}
 		};
 		systemFunctions[Consts::SYS_CALL_SET_STATIC_VAR] = _::sysCall;

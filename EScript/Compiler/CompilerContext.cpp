@@ -56,12 +56,8 @@ void FunCompileContext::pushSetting_declaredVars(const declaredVariableMap_t & v
 				variableCollectorStack.top()->push_back(varIndex);
 			}
 		}else if(var.second == variableType_t::STATIC_VAR){
-			const size_t varIndex = staticData->declareStaticVariable(var.first);
+			const size_t varIndex = staticData.declareStaticVariable(var.first);
 			entry.declaredVariables[var.first] = std::make_pair(variableType_t::STATIC_VAR,varIndex);
-
-//			entry.declaredVariables[var.first] = std::make_pair(variableType_t::LOCAL_VAR,varIndex);
-//			staticData
-			std::cout << "Declare Static #"<<varIndex<<" " << __FILE__<<":"<<__LINE__<<std::endl;
 		}
 	}
 }

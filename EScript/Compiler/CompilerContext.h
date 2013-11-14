@@ -27,7 +27,7 @@ class Compiler;
 	(or block of code without surrounding function).*/
 class FunCompileContext {
 		Compiler & compiler;
-		StaticData * staticData;
+		StaticData & staticData;
 		InstructionBlock & instructions;
 
 		typedef std::unordered_map<StringId,varLocation_t> varLocationMap_t;
@@ -63,8 +63,8 @@ class FunCompileContext {
 		FunCompileContext* parent; // used for detecting the visibility of static variables
 		bool usesStaticVars; // if true, the function has to reference the static data container
 	public:
-		FunCompileContext(Compiler & _compiler,StaticData*cud, InstructionBlock & _instructions,const CodeFragment & _code) :
-				compiler(_compiler),staticData(cud),instructions(_instructions),currentLine(-1),currentMarkerId(Instruction::JMP_TO_MARKER_OFFSET),
+		FunCompileContext(Compiler & _compiler,StaticData&sData, InstructionBlock & _instructions,const CodeFragment & _code) :
+				compiler(_compiler),staticData(sData),instructions(_instructions),currentLine(-1),currentMarkerId(Instruction::JMP_TO_MARKER_OFFSET),
 				currentOnceMarkerCounter(0),code(_code),parent(nullptr),usesStaticVars(false){}
 
 		// create a context for a function embedded another function
@@ -88,8 +88,8 @@ class FunCompileContext {
 		uint32_t declareString(const std::string & str)					{	return instructions.declareString(str);	}
 
 		const CodeFragment & getCode()const								{	return code;	}
-		Compiler & getCompiler()										{	return compiler;	}
-		StaticData * getStaticData()					{	return staticData;	}
+		Compiler & getCompiler()const									{	return compiler;	}
+		StaticData & getStaticData()const								{	return staticData;	}
 		int getCurrentLine()const										{	return currentLine;	}
 		//! if the setting is not defined, Instruction::INVALID_JUMP_ADDRESS is returned.
 		uint32_t getCurrentMarker(setting_t markerType)const;
