@@ -85,5 +85,5 @@ Std.Traits.DefaultComparisonOperatorsTrait := new Std.Traits.GenericTrait("Std.T
 	};
 };
 
-// Std._registerModuleResult("Std/Traits/CommonTraits",Ns); // support loading with Std.requireModule and loadOnce.
-return Ns;
+Std._registerModuleResult("Std/Traits/CommonTraits",Std.Traits); // support loading with Std.requireModule and loadOnce.
+return Std.Traits;

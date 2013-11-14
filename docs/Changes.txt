@@ -23,7 +23,7 @@ Language:
 			@(once) thisFn.staticCounter := 0; // this is only executed once
 			return ++thisFn.staticCounter;
 		};
- - Static variables added: Variables declared with the keyword 'static' are accessible in the smalles surrounding block and all
+ - Static variables added: Variables declared with the keyword 'static' are accessible in the smallest surrounding block and all
 	nested blocks -- including functions defined here. The variable's storage exists only once, even if defined in a function
 	which is called recursively. This can e.g. be used to create a closure.
 	E.g.:

@@ -19,8 +19,8 @@ T.onDataChanged @(init) := Std.require('Std/MultiProcedure');
 
 /*! (ctor) */
 T._constructor ::= fn([void,Map] source=void){
-    if(source)
-        this.merge(source);
+	if(source)
+		this.merge(source);
 };
 
 T.assign ::= fn(Map _values,warnOnUnknownKey = true){
@@ -36,7 +36,7 @@ T.clear ::= fn(){
 	return this;
 };
 
-T.count ::=			fn(){	dataWrappers.count();	};
+T.count ::=			fn(){	return dataWrappers.count();	};
 
 //! (internal)
 T.detachDataWrapperSubscription @(private) ::= fn(dataWrapper){
@@ -52,7 +52,7 @@ T.destroy ::= fn(){
 	this.dataWrappers = void; // prevent further usage.
 	return this;
 };
-T.empty ::=			fn(){	this.dataWrappers.empty();	};
+T.empty ::=			fn(){	return this.dataWrappers.empty();	};
 
 T.getValue ::= fn(key,defaultValue = void){
 	var dataWrapper = this.dataWrappers[key];
@@ -76,8 +76,8 @@ T.merge ::= fn(Map _dataWrappers){
 	return this;
 };
 
-/*! Add a new Datawrapper with the given key.
-	\note calles onDataChanged(key, valueOfTheDataWrapper)	*/
+/*! Add a new DataWrapper with the given key.
+	\note calls onDataChanged(key, valueOfTheDataWrapper)	*/
 T.addDataWrapper ::= fn(key, Std.DataWrapper dataWrapper){
 	if(this.dataWrappers[key])
 		this.unset(key);
@@ -85,10 +85,10 @@ T.addDataWrapper ::= fn(key, Std.DataWrapper dataWrapper){
 
 	var changedListener = fn(value){
 		thisFn.dataWrapperContainer.onDataChanged(thisFn.key,value);
-	};
+	}.clone(); // each entry gets its own function object
 	// attach as attribute to allow identification for removing.
-	changedListener.dataWrapperContainer := this,
-	changedListener.key := key,
+	changedListener.dataWrapperContainer := this;
+	changedListener.key := key;
 	dataWrapper.onDataChanged += changedListener;
 	this.onDataChanged(key,dataWrapper());
 	return this;
@@ -109,6 +109,7 @@ T.unset ::= fn(key){
 	var dataWrapper = this.dataWrappers[key];
 	if(dataWrapper){
 		this.detachDataWrapperSubscription(dataWrapper);
+		this.dataWrappers.unset(key);
 	}
 	return this;
 };
@@ -135,7 +136,7 @@ T.getIterator ::= fn(){
 };
 
 
-// Std._registerModuleResult("Std/DataWrapper",Std.DataWrapper); // support loading with Std.requireModule and loadOnce.
+ Std._registerModule("Std/DataWrapperContainer",T); // support loading with Std.requireModule and loadOnce.
 //Std._markAsLoaded(__DIR__,__FILE__);
 
 return T;

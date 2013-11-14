@@ -22,7 +22,6 @@
 /*! This file includes the features needed by all other components of the Std-lib:
 	 - Parameter bindings using [params] =>
 	 - declareNamespace(...)
-
 */
 Array."=>" ::= fn(callable){
 	var myWrapper = thisFn.wrapperFn.clone();
@@ -31,11 +30,9 @@ Array."=>" ::= fn(callable){
 	return myWrapper;
 };
 
-Array."=>".wrapperFn := fn(params...){
-	// _getCurrentCaller() is used instead of "this", as "this" may not be defined if this function
-	// is called without a caller. This then results in a warning due to an undefined variable "this".
-	return (Runtime._getCurrentCaller()->thisFn.wrappedFun)(thisFn.boundParams...,params...);
-};
+// _getCurrentCaller() is used instead of "this", as "this" may not be defined if this function
+// is called without a caller. This then results in a warning due to an undefined variable "this".
+Array."=>".wrapperFn := fn(params...){	return (Runtime._getCurrentCaller()->thisFn.wrappedFun)(thisFn.boundParams...,params...);	};
 
  // ------------------------------------------
 
@@ -95,9 +92,10 @@ var loader = [moduleSearchPaths] => fn(moduleSearchPaths, String moduleId){
 	}
 	foreach(moduleSearchPaths as var p){
 		var filename = p + moduleId + ".escript";
-		outln("Testing file: '" + filename +"'");
+	//	outln("Testing file: '" + filename +"'");
 		if(IO.isFile(filename)){
-			outln("loading...");
+			Runtime.log(Runtime.LOG_INFO,"[Std] Loading module '"+filename+"'.");
+	//		outln("loading...");
 			return load(filename);
 		}
 	}

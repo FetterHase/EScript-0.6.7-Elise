@@ -3,7 +3,7 @@
 // See copyright notice in basics.escript
 // ------------------------------------------------------
 /**
- ** Configuration management for storing JSON-expressable data.
+ ** Configuration management for storing JSON-formatted data.
  **/
 
 loadOnce(__DIR__ + "/basics.escript");
@@ -18,8 +18,14 @@ T.filename @(private) := "";
 T.autoSave @(private) := void;
 
 //! (ctor)
-T._constructor ::= fn(Bool autoSave = false){
-    this.autoSave = autoSave;
+T._constructor ::= fn(Bool _autoSave = false){
+	this.autoSave = _autoSave;
+};
+
+T.clear ::= fn(){
+	this.data.clear();
+	if(autoSave)
+		this.save();
 };
 
 T.getFilename ::= fn(){
@@ -28,7 +34,7 @@ T.getFilename ::= fn(){
 
 /*!	Get a config-value.
 	If the value is not set, the default value is returned and memorized.	*/
-T.get ::= fn( key, defaultValue = void){
+T.get ::= fn( String key, defaultValue = void){
 	var fullKey = key.toString();
 	var group = this.data;
 
@@ -40,7 +46,7 @@ T.get ::= fn( key, defaultValue = void){
 			var newGroup = group[groupName];
 			if(! (newGroup---|>Map) ){
 				if( void!==defaultValue )
-					setValue(fullKey,defaultValue);
+					this.set(fullKey,defaultValue);
 				return defaultValue;
 			}
 			group = newGroup;
@@ -48,51 +54,50 @@ T.get ::= fn( key, defaultValue = void){
 	}
 
 	var value = parseJSON(toJSON(group[key])); // deep copy
-    if(void===value){
-        if(void!==defaultValue)
-            setValue(fullKey,defaultValue);
-        return defaultValue;
-    }
-    return value;
+	if(void===value){
+		if(void!==defaultValue)
+			this.set(fullKey,defaultValue);
+		return defaultValue;
+	}
+	return value;
 };
 
 /*! Load a json-formatted config file and store the filename.
 	\return true on success */
-T.init ::= fn( filename, warnOnFailure = true ){
-    this.filename = filename;
-    try{
-        var s = IO.loadTextFile(filename);
-        var c = parseJSON(s);
-        if(c---|>Map){
-            this.data = c;
-        }
-        else{
-            this.data = new Map;
-        }
-    }catch(e){
-    	if(warnOnFailure)
+T.init ::= fn(String filename, warnOnFailure = true ){
+	this.filename = filename;
+	try{
+		var s = IO.loadTextFile(filename);
+		var c = parseJSON(s);
+		if(c---|>Map){
+			this.data = c;
+		}
+		else{
+			this.data = new Map;
+		}
+	}catch(e){
+		if(warnOnFailure)
 			Runtime.warn("Could not load config-file("+filename+"): "+e);
-        return false;
-    }
-    return true;
+		return false;
+	}
+	return true;
 };
 
 //! Save configuration to file.
-T.save ::= fn( filename = void){
-    if(!filename){
-        filename = this.filename;
-    }
-    if(!filename){
+T.save ::= fn(_filename = void){
+	if(!_filename)
+		_filename = this.filename;
+	if(_filename){
 		var s = toJSON(this.data);
 		if(s.length()>0){
-			IO.saveTextFile(filename,s);
+			IO.saveTextFile(_filename,s);
 		}
-    }
+	}
 };
 
 //! Set a short info-string for a config entry
-T.setInfo ::= fn( key, value){
-	this.setValue(key+" (INFO)",value);
+T.setInfo ::= fn(key, value){
+	this.set(key+" (INFO)",value);
 };
 
 
@@ -100,13 +105,13 @@ T.setInfo ::= fn( key, value){
 	If the key contains dots (.), the left side is interpreted as a subgroup.
 	If the value is void, the entry is removed.
 	\example
-		setValue( "Foo.bar.a1" , 2 );
+		set( "Foo.bar.a1" , 2 );
 		---> { "Foo" : { "bar : { "a1" : 2 } } }
 	\note if autoSave is true, the config file is saved immediately
 	*/
-T.set ::= fn( key, value){
+T.set ::= fn(String key, value){
 	if(void===value){
-		unsetValue(key);
+		unset(key);
 		return;
 	}
 	var group = this.data;
@@ -126,11 +131,11 @@ T.set ::= fn( key, value){
 	if(toJSON(group[key]) != newJSON){ // data changed?
 		group[key]=parseJSON(newJSON);// deep clone
 		if(autoSave)
-			save();
+			this.save();
 	}
 };
 
-T.unset ::= fn(key){
+T.unset ::= fn(String key){
 	var group = this.data;
 
 	// Key is subgroup key
@@ -144,14 +149,18 @@ T.unset ::= fn(key){
 
 	group.unset(key);
 	if(autoSave)
-		save();
+		this.save();
 };
 
 
 T._get ::= T.get;
-T._set ::= T.set;
+T._set ::= fn(key,value){
+	this.set(key,value);
+	return value;
+};
 
 //Std.Traits.addTrait( T, Std.Traits.JSONDataStore );
+Std._registerModule('Std/MultiProcedure',T); // support loading with Std.requireModule and loadOnce.
 
 
 return T;

@@ -3,6 +3,8 @@
 // See copyright notice in basics.escript
 // ------------------------------------------------------
 
+loadOnce(__DIR__+"/basics.escript");
+
 /*! System for serializing EScript Objects into JSON-formatted strings.
 	
 	Example:
@@ -11,11 +13,11 @@
 	var dataObject = new ExtObject( { $data : 1 } );
 	var someObject = new ExtObject( { $data1 : dataObject, $data2 : dataObject } );
 	
-	var ctxt = new ObjectSerialization.Context( ObjectSerialization.defaultRegistry );
+	var ctxt = new ObjectSerialization.Context;
 	var mySerializedObject = ctxt.serialize(someObject);
 
 	// ... store and load mySerializedObject
-	var ctxt = new ObjectSerialization.Context( ObjectSerialization.defaultRegistry );
+	var ctxt = new ObjectSerialization.Context;
 	var someObject = ctxt.createFromString( mySerializedObject);
 	
 	if( someObject.data1 == someObject.data2)
@@ -23,7 +25,16 @@
 	
 */
 
-GLOBALS.ObjectSerialization := new Namespace;
+/*
+   \todo  support Maps containing '##TYPE##' ##REF## or ##ID##
+   \todo  support bound parameters: [1,2,3] => fn(a,b,c){ ... };
+
+*/
+static TypeRegistry;
+static TypeHandler;
+static GenericTypeHandler;
+static Context;
+static defaultRegistry;
 
 // ---------------------------------------------------------------------------
 
@@ -31,16 +42,17 @@ GLOBALS.ObjectSerialization := new Namespace;
 	If a TypeRegistry references a base registry, this registry can specialize on the handling of some types. For all 
 	others, the base registry is used.
 	\note If you use multiple TypeRegistry-objects, always use the same name for a Type. */
-ObjectSerialization.TypeRegistry := new Type;
+
 {
-	var T = ObjectSerialization.TypeRegistry;
-	Traits.addTrait(T,Traits.PrintableNameTrait,$TypeRegistry);
+	var T = TypeRegistry = new Type;
+
+	T._printableName @(override) ::= $TypeRegistry;
 
 	T.registeredTypes @(private,init) := Map; // Map: type's name ---> TypeHandler
 	T.baseRegistry @(private) := void; //  void or TypeRegistry
 
 	//! (ctor)
-	T._constructor ::= fn( [ObjectSerialization.TypeRegistry,void] base = ObjectSerialization.defaultRegistry){
+	T._constructor ::= fn( [TypeRegistry,void] base = defaultRegistry){
 		this.baseRegistry = base;
 	};
 	
@@ -48,21 +60,21 @@ ObjectSerialization.TypeRegistry := new Type;
 		The TypeHandler is returned and should then be initialized.
 		\see CommonSerializers for examples	*/
 	T.registerType ::= fn(Type type, String typeName){
-		var handler = new ObjectSerialization.GenericTypeHandler(type,typeName);
-		registerTypeHandler(handler);
+		var handler = new GenericTypeHandler(type,typeName);
+		this.registerTypeHandler(handler);
 		return handler;
 	};
 
 	//! (internal)
-	T.registerTypeHandler ::= fn(ObjectSerialization.TypeHandlerBase typeHandler){
-		registeredTypes[ typeHandler.getHandledTypeName() ] = typeHandler;
-		registeredTypes[ typeHandler.getHandledType().toString() ] = typeHandler;
+	T.registerTypeHandler ::= fn(TypeHandler typeHandler){
+		this.registeredTypes[ typeHandler.getHandledTypeName() ] = typeHandler;
+		this.registeredTypes[ typeHandler.getHandledType().toString() ] = typeHandler;
 //		outln("Registering: ",typeHandler.getHandledTypeName()," : ",typeHandler.getHandledType().toString()," : ",typeHandler);
 	};
 
 	T.getTypeHandler ::= fn([String,Type] nameOrType){
 		var handler = this.registeredTypes[nameOrType];
-		return (!handler && baseRegistry) ? baseRegistry.getTypeHandler(nameOrType) : handler;
+		return (!handler && this.baseRegistry) ? this.baseRegistry.getTypeHandler(nameOrType) : handler;
 	};
 }
 
@@ -71,10 +83,10 @@ ObjectSerialization.TypeRegistry := new Type;
 
 /*! A Context is used for one de-/serialization process during which 
 	referenced objects get context-unique identifiers.	*/
-ObjectSerialization.Context := new Type;
 {
-	var T = ObjectSerialization.Context;
-	Traits.addTrait(T,Traits.PrintableNameTrait,$Context);
+	var T = Context = new Type;
+		
+	T._printableName @(override) ::= $Context;
 
 	T.objRegistry_NrToObjId @(private,init) := Map;
 	T.objRegistry_ObjIdToObj @(private,init) := Map;
@@ -84,7 +96,7 @@ ObjectSerialization.Context := new Type;
 	T.globalObjCounter ::= 0;	// (static) used to easily generate unique object ids during one execution process
 
 	//! (ctor)
-	T._constructor ::= fn(ObjectSerialization.TypeRegistry typeRegistry = ObjectSerialization.defaultRegistry){
+	T._constructor ::= fn(TypeRegistry typeRegistry = defaultRegistry){
 		this.typeRegistry = typeRegistry;
 	};
 
@@ -125,12 +137,21 @@ ObjectSerialization.Context := new Type;
 	};
 	
 	/*! Create an Object from the given String */
-	T.createFromString ::= fn(String s){	return createObject(parseJSON(s));	};
+	T.createFromString ::= fn(String s){	return this.createObject(parseJSON(s));	};
 
 	/*! Create an Object from the given description. */
 	T.createObject ::= fn(description){
 		// special cases
-		if( void==description || description---|>String || description---|>Number || description---|>Bool ){
+		if(description---|>String){
+			if(description.beginsWith("##REF(")){
+				var refId = description.substr(6,-3);
+				var obj = this.findObject(refId);
+				if(void==obj)
+					Runtime.warn("Unknown reference '"+refId+"'.");
+				return obj;
+			}
+			return description;
+		}else if( void==description || description---|>Number || description---|>Bool ){
 			return description;
 		}else if(description---|>Array){
 			var arr=[];
@@ -142,12 +163,14 @@ ObjectSerialization.Context := new Type;
 			Runtime.warn("Unknown value");
 			return void;
 		}
-		var refId = description['##REF##']; 
-		if(refId){
-			var obj = this.findObject(refId);
-			if(void==obj)
-				Runtime.warn("Unknown reference '"+refId+"'.");
-			return obj;
+		{
+			var refId = description['##REF##'];  // for backward compatibility
+			if(refId){
+				var obj = this.findObject(refId);
+				if(void==obj)
+					Runtime.warn("Unknown reference '"+refId+"'.");
+				return obj;
+			}
 		}
 		var objId = description['##ID##'];
 		if(objId){
@@ -193,11 +216,12 @@ ObjectSerialization.Context := new Type;
 		}
 	};
 
+	static globalObjCounter = 0;
 	//! (internal)
 	T.registerObject ::= fn(obj,_id = false){
 		// The unique objNr is needed to be able to handle one object within several contexts.
 		if(!obj.isSet($__ObjectSerialization_objNr))
-			obj.__ObjectSerialization_objNr := ++ObjectSerialization.Context.globalObjCounter;
+			obj.__ObjectSerialization_objNr := ++globalObjCounter;
 		
 		var objNr = obj.__ObjectSerialization_objNr;
 		var objId = _id ? _id : this.id+"."+ (++this.counter).format(0,false);
@@ -213,10 +237,10 @@ ObjectSerialization.Context := new Type;
 /*! (internal) Manages the (de-)serialization process of objects of one specific type. 
 	\note For almost all cases, use the specialized ObjectSerialization.GenericTypeHandler instead.
 */
-ObjectSerialization.TypeHandlerBase := new Type;
+
 {
-	var T = ObjectSerialization.TypeHandlerBase;
-	Traits.addTrait(T,Traits.PrintableNameTrait,$TypeHandlerBase);
+	var T = TypeHandler = new Type;
+	T._printableName @(override) ::= $TypeHandler;
 
 	T.type @(private) := void;
 	T.typeName @(private) := "";
@@ -228,10 +252,10 @@ ObjectSerialization.TypeHandlerBase := new Type;
 	};
 	
 	//! ---o
-	T.createDescription ::= fn(ObjectSerialization.Context ctxt,obj){	UserFunction.pleaseImplement();	};
+	T.createDescription ::= fn(Context ctxt,obj){	Std.ABSTRACT_METHOD();	};
 
 	//! ---o
-	T.createObject ::= 		fn(ObjectSerialization.Context ctxt,Map description){	UserFunction.pleaseImplement();	};
+	T.createObject ::= 		fn(Context ctxt,Map description){	Std.ABSTRACT_METHOD();	};
 
 	T.getHandledType ::= 			fn(){	return type;};
 	T.getHandledTypeName ::= 		fn(){	return typeName;};
@@ -239,23 +263,23 @@ ObjectSerialization.TypeHandlerBase := new Type;
 
 // ------------
 
-//! ---|> TypeHandlerBase
-ObjectSerialization.GenericTypeHandler := new Type(ObjectSerialization.TypeHandlerBase);
+//! GenericTypeHandler ---|> TypeHandler
 {
-	var T = ObjectSerialization.GenericTypeHandler;
-	Traits.addTrait(T,Traits.PrintableNameTrait,$GenericTypeHandler);
+	var T = GenericTypeHandler = new Type(TypeHandler);
+	T._printableName @(override) ::= $GenericTypeHandler;
 	
 	T.trackIdentity @(private) := false;
 
-	T.addInitializer ::=			fn(fun){	doInitializeObject+=fun;	return this;	};
-	T.addDescriber ::=				fn(fun){	doDescribeObject+=fun;		return this;	};
+	T.addInitializer ::=			fn(fun){	doInitializeObject += fun;	return this;	};
+	T.addDescriber ::=				fn(fun){	doDescribeObject += fun;		return this;	};
 	
-	//! ---|> TypeHandlerBase
-	T.createDescription ::= fn(ObjectSerialization.Context ctxt,obj){
+	//! ---|> TypeHandler
+	T.createDescription @(override) ::= fn(Context ctxt,obj){
 		// object already serialized in this context? ---> return a reference.
 		var id = ctxt.findObjectId(obj);
 		if(id)
-			return {'##REF##' : id};
+//			return {'##REF##' : id};
+			return "##REF("+id+")##";
 		
 		// Should the object be referenced? ---> store it in the context's registry with a context wide id.
 		var description = new Map;
@@ -269,22 +293,20 @@ ObjectSerialization.GenericTypeHandler := new Type(ObjectSerialization.TypeHandl
 		return description;
 	};
 
-	//! ---|> TypeHandlerBase
-	T.createObject ::= 		fn(ObjectSerialization.Context ctxt,Map description){	
-		var obj = objectFactory(ctxt,getHandledType(),description);
+	//! ---|> TypeHandler
+	T.createObject @(override) ::= 		fn(Context ctxt,Map description){	
+		var obj = this.objectFactory(ctxt, this.getHandledType(), description);
 		ctxt.registerObjectIfNecessary(obj,description); // if trackIdentity??
-
-		this.doInitializeObject(ctxt,obj,description);
+		this.doInitializeObject(ctxt, obj, description);
 		return obj;
-	
 	};
 	
-	T.doDescribeObject @(private,init) := MultiProcedure;
-	T.doInitializeObject @(private,init) := MultiProcedure;
+	T.doDescribeObject @(private,init) := Std.require('Std/MultiProcedure');
+	T.doInitializeObject @(private,init) := Std.require('Std/MultiProcedure');
 
 	/*! Use IdentityTracking to identify Objects that are referenced multiple times
 		in one serialization process.	*/
-	T.enableIdentityTracking ::=	fn(){	trackIdentity = true;	return this;	};
+	T.enableIdentityTracking ::=	fn(){	this.trackIdentity = true;	return this;	};
 	
 	T.getDescribers  ::= 			fn(){	return this.doDescribeObject;	};
 	T.getFactory  ::= 				fn(){	return this.objectFactory;		};
@@ -294,11 +316,11 @@ ObjectSerialization.GenericTypeHandler := new Type(ObjectSerialization.TypeHandl
 	/*!	Init the describers, factory, initializers and trackIdentity-marker from
 		another TypeHandler. This can e.g. be used to build a handler for an inheriting type
 		based on the handler of the type's base type.	*/
-	T.initFrom ::= fn(ObjectSerialization.GenericTypeHandler other){
-		trackIdentity = other.getIdentityTracking();
-		doDescribeObject = other.getDescribers().clone();
-		doInitializeObject = other.getInitializers().clone();
-		setFactory(other.getFactory());
+	T.initFrom ::= fn(GenericTypeHandler other){
+		this.trackIdentity = other.getIdentityTracking();
+		this.doDescribeObject = other.getDescribers().clone();
+		this.doInitializeObject = other.getInitializers().clone();
+		this.setFactory(other.getFactory());
 		return this;
 	};
 
@@ -316,53 +338,78 @@ ObjectSerialization.GenericTypeHandler := new Type(ObjectSerialization.TypeHandl
 // Supported types
 
 //! The default registry
-ObjectSerialization.defaultRegistry := new ObjectSerialization.TypeRegistry(void); // create TypeRegistry without base
-var defaultRegistry = ObjectSerialization.defaultRegistry;
+defaultRegistry = new TypeRegistry(void); // create TypeRegistry without base
 
 
 // Builtin EScript Types
 // ----------------------
 
-{ // Simple Types that can directly be expressed in JSON (Array,Bool,Map,Number)-
-	//!	---|> ObjectSerialization.TypeHandlerBase
-	var SimpleTypeHandler = new Type(ObjectSerialization.TypeHandlerBase);
-	Traits.addTrait(SimpleTypeHandler,Traits.PrintableNameTrait,$SimpleTypeHandler);
-	
-	//! ---|> TypeHandlerBase
-	SimpleTypeHandler.createDescription @(override) ::= fn(ObjectSerialization.Context ctxt,obj){	return obj;	};
-	SimpleTypeHandler.setDescriber ::= fn(fun)	{	this.createDescription @(override) := fun;	return this;	};
-	
-	// String
-	defaultRegistry.registerTypeHandler(new SimpleTypeHandler(String,"String"));
+// Types that can directly be expressed in JSON (Array,Bool,Map,Number)-
 
-	// Number
-	defaultRegistry.registerTypeHandler(new SimpleTypeHandler(Number,"Number"));
-
-	// Bool
-	defaultRegistry.registerTypeHandler(new SimpleTypeHandler(Bool,"Bool"));
-
-	// Array
-	defaultRegistry.registerTypeHandler( 
-		(new SimpleTypeHandler(Array,"Array"))
-			.setDescriber(fn(ctxt,Array obj){
-				var description = [];
-				foreach(obj as var value)
-					description += ctxt.createDescription(value);
-				return description;
-			})
-	);
-
-	// Map
-	defaultRegistry.registerTypeHandler( 
-		(new SimpleTypeHandler(Map,"Map"))
-			.setDescriber(fn(ctxt,Map obj){
-				var description = new Map;
-				foreach(obj as var key,var value)
-					description[key] = ctxt.createDescription(value);
-				return description;
-			})
-	);
-	}
+{	// Array
+	var th = new TypeHandler(Array,"Array");
+	th.createDescription @(override) :=	fn(ctxt,Array obj){
+		var description = [];
+		foreach(obj as var value)
+			description += ctxt.createDescription(value);
+		return description;
+	};
+	defaultRegistry.registerTypeHandler(th);
+}
+{	// Bool (directly expressed by its description)
+	var th = new TypeHandler(Bool,"Bool");
+	th.createDescription @(override) :=	fn(ctxt,Bool obj){return obj;};
+	defaultRegistry.registerTypeHandler(th);
+}
+{	// Number (directly expressed by its description)
+	var th = new TypeHandler(Number,"Number");
+	th.createDescription @(override) :=	fn(ctxt,Number obj){return obj;};
+	defaultRegistry.registerTypeHandler(th);
+}
+{	// String (with special case for reserved values)
+	var th = new TypeHandler(String,"String");
+	th.createDescription @(override) := fn(ctxt,String obj){
+		if(obj.beginsWith("##")){
+			return {	'##TYPE##':"String", 'str' : obj	};
+		}else{
+			return obj;
+		}
+	};
+	// only called for the special case having an explicit ##TYPE## field
+	th.createObject @(override) := fn(Context ctxt,Map description){	
+		return description['str'];
+	};
+	defaultRegistry.registerTypeHandler(th);
+}
+{	// Map (with special case for reserved keys)
+	var th = new TypeHandler(Map,"Map");
+	th.createDescription @(override) := fn(ctxt,Map obj){
+		var containsReservedKeys = false;
+		var description = new Map;
+		foreach(obj as var key,var value){
+			description[key] = ctxt.createDescription(value);
+			containsReservedKeys |= key.beginsWith("##");
+		}
+		if(containsReservedKeys){
+			return {
+				'##TYPE##' : "Map",
+				'entries' : description
+			};
+		}else{
+			return description;
+		}
+	};
+	// only called for the special case having an explicit ##TYPE## field
+	th.createObject @(override) := fn(Context ctxt,Map description){
+		var m = new Map;
+		var entries = description['entries'];
+		if(entries)
+			foreach(entries as var key,var subDescription)
+				m[key] = ctxt.createObject(subDescription);
+		return m;
+	};
+	defaultRegistry.registerTypeHandler(th);
+}
 
 // -----
 
@@ -399,7 +446,10 @@ defaultRegistry.registerType(Delegate,"Delegate")
 // UserFunction
 defaultRegistry.registerType(UserFunction,"UserFunction")
 	.enableIdentityTracking()
-	.addDescriber(fn(ctxt,UserFunction obj,Map d){	
+	.addDescriber(fn(ctxt,UserFunction obj,Map d){
+		if(obj.usesStaticData())
+			Runtime.warn("Serializing UserFunction that relies on static data! "+obj.toString());
+
 		var attr = ctxt.getAttributeDescription(obj);
 		if(!attr.empty())
 			d['attr'] = attr;
@@ -413,3 +463,20 @@ defaultRegistry.registerType(UserFunction,"UserFunction")
 	});
 
 // -------------------------------------------------------------------------------
+var ObjectSerialization = new Namespace;
+Std.ObjectSerialization := ObjectSerialization;
+ObjectSerialization.Context := Context;
+ObjectSerialization.TypeRegistry := TypeRegistry;
+ObjectSerialization.defaultRegistry := defaultRegistry;
+
+ObjectSerialization.serialize := fn(obj){
+	return (new Context).serialize(obj);
+};
+ObjectSerialization.create := fn([String,Map] stringOrDescription){
+	return stringOrDescription---|>String ? 
+				(new Context).createFromString(stringOrDescription) :
+				(new Context).createObject(stringOrDescription);
+};
+ObjectSerialization.registerType := defaultRegistry->defaultRegistry.registerType;
+
+return ObjectSerialization;

@@ -56,11 +56,25 @@ Std.onModule('Std/Traits/CallableTrait', [T] => fn(MultiProcedure, CallableTrait
 });
 
 
+Std.onModule('Std/ObjectSerialization', [T] => fn(MultiProcedure, ObjectSerialization){
+	ObjectSerialization.registerType(MultiProcedure,'Std.MultiProcedure')
+		.enableIdentityTracking()
+		.addDescriber(fn(ctxt,mFun,Map d){	
+			d['functions'] = ctxt.createDescription( mFun.accessFunctions() );
+		})
+		.addInitializer(fn(ctxt, mFun,Map d){
+			var attr = d['functions'];
+			if(attr){
+				foreach(attr as var fnDescription)
+					mFun += ctxt.createObject(fnDescription);
+			}
+		});
+});
+
+
 Std.MultiProcedure := T;
 
-//// support loading with Std.requireModule and loadOnce.
-//Std._unregisterModule("Std/MultiProcedure");
-//Std._registerModule("Std/MultiProcedure",Std.MultiProcedure);
+Std._registerModule('Std/MultiProcedure',T); // support loading with Std.requireModule and loadOnce.
 
 return Std.MultiProcedure;
 // ------------------------------------------
